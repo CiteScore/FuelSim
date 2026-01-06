@@ -43,6 +43,11 @@
     .footer{margin-top:14px;color:var(--muted);font-size:11px}
     .small{font-size:11px;color:var(--muted)}
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+    button{
+      padding:10px 12px;border-radius:10px;border:1px solid var(--line);
+      background:rgba(255,255,255,.06);color:var(--text);cursor:pointer
+    }
+    button.primary{background:rgba(98,168,255,.18)}
   </style>
 </head>
 
@@ -93,6 +98,49 @@
         </div>
 
         <div class="warn" id="warnBox"></div>
+
+        <!-- Editable Fuel Properties (browser-local) -->
+        <div style="margin-top:14px; padding:12px; border:1px solid var(--line); border-radius:12px; background:rgba(255,255,255,.03)">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
+            <div style="font-weight:700; font-size:12px; color:#d8e4ff">Edit / Add Fuel</div>
+            <div class="small">Saved locally in this browser</div>
+          </div>
+
+          <div class="row" style="margin-top:10px">
+            <div>
+              <label for="editKey">Fuel key to edit</label>
+              <select id="editKey"></select>
+            </div>
+            <div>
+              <label for="editName">Fuel name</label>
+              <input id="editName" type="text" placeholder="Display name" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div><label for="editXC">xC</label><input id="editXC" type="text" placeholder="e.g., 12" /></div>
+            <div><label for="editYH">yH</label><input id="editYH" type="text" placeholder="e.g., 26" /></div>
+          </div>
+
+          <div class="row">
+            <div><label for="editZO">zO</label><input id="editZO" type="text" placeholder="e.g., 0" /></div>
+            <div><label for="editRho">Density ρ (kg/m³)</label><input id="editRho" type="text" placeholder="e.g., 780" /></div>
+          </div>
+
+          <div class="row">
+            <div><label for="editLHV">LHV (MJ/kg)</label><input id="editLHV" type="text" placeholder="e.g., 43.3" /></div>
+            <div style="display:flex; align-items:end; gap:10px">
+              <button id="btnSaveFuel" class="primary" style="width:100%">Save fuel</button>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:8px">
+            <button id="btnNewFuel">Add new fuel key</button>
+            <button id="btnResetLocal">Reset local edits</button>
+          </div>
+
+          <div id="editMsg" class="note" style="margin-top:10px"></div>
+        </div>
       </div>
 
       <!-- Outputs -->
@@ -133,17 +181,33 @@
   const Y_O2_AIR = 0.232;
   const MW = { C: 12.011, H: 1.008, O: 15.999, O2: 31.998 };
 
-  // ---- Fuel database (edit these values as you wish)
-  // Fields:
-  //  xC,yH,zO: surrogate formula CxHyOz
-  //  rho: reference density kg/m^3 (often 15C for liquids; cryogenic for LCH4)
-  //  LHV: MJ/kg
-  const FUELS = {
+  // ---- Default fuel database (do not mutate directly)
+  const DEFAULT_FUELS = {
     JetA: { name: "Jet-A (rep)",      xC: 11.4, yH: 22.1, zO: 0.0, rho: 803.0, LHV: 43.06 },
     HEFA: { name: "HEFA-SPK (rep)",   xC: 11.6, yH: 25.2, zO: 0.0, rho: 752.0, LHV: 44.18 },
     FT:   { name: "FT-SPK (surr)",    xC: 12.0, yH: 26.0, zO: 0.0, rho: 760.0, LHV: 43.50 },
     LCH4: { name: "Liquid Methane",   xC:  1.0, yH:  4.0, zO: 0.0, rho: 420.0, LHV: 50.00 }
   };
+
+  // ---- Working database (defaults + browser-local overrides)
+  const FUELS = JSON.parse(JSON.stringify(DEFAULT_FUELS));
+
+  try {
+    const saved = localStorage.getItem("fuelsim_fuels");
+    if (saved) {
+      const obj = JSON.parse(saved);
+      for (const k of Object.keys(obj)) FUELS[k] = obj[k];
+    }
+  } catch(e) {}
+
+  function saveLocalFuels(){
+    try { localStorage.setItem("fuelsim_fuels", JSON.stringify(FUELS)); } catch(e) {}
+  }
+  function resetLocalFuels(){
+    try { localStorage.removeItem("fuelsim_fuels"); } catch(e) {}
+    for (const k of Object.keys(FUELS)) delete FUELS[k];
+    for (const k of Object.keys(DEFAULT_FUELS)) FUELS[k] = JSON.parse(JSON.stringify(DEFAULT_FUELS[k]));
+  }
 
   // ---- Chemistry helpers
   function mwFuel(f) {
@@ -179,7 +243,7 @@
     return { name:"", xC, yH, zO, rho, LHV };
   }
 
-  // ---- UI wiring
+  // ---- UI elements
   const elFuelA = document.getElementById("fuelA");
   const elFuelB = document.getElementById("fuelB");
   const elMassA = document.getElementById("massA");
@@ -197,32 +261,29 @@
 
   function fmt(x, n=3){ return Number(x).toFixed(n); }
 
-  function populate() {
-    const keys = Object.keys(FUELS);
-    for (const k of keys) {
-      const optA = document.createElement("option");
-      optA.value = k; optA.textContent = `${k} — ${FUELS[k].name}`;
-      elFuelA.appendChild(optA);
-
-      const optB = document.createElement("option");
-      optB.value = k; optB.textContent = `${k} — ${FUELS[k].name}`;
-      elFuelB.appendChild(optB);
-    }
-    elFuelA.value = "JetA";
-    elFuelB.value = "HEFA";
-  }
-
   function showWarn(msg){
     if (!msg){ warnBox.style.display="none"; warnBox.textContent=""; return; }
     warnBox.style.display="block";
     warnBox.textContent = msg;
   }
 
+  function fuelKeys(){ return Object.keys(FUELS).sort(); }
+
+  function rebuildDropdown(sel, keepValue){
+    const prev = keepValue ?? sel.value;
+    sel.innerHTML = "";
+    for (const k of fuelKeys()){
+      const opt = document.createElement("option");
+      opt.value = k;
+      opt.textContent = `${k} — ${FUELS[k].name}`;
+      sel.appendChild(opt);
+    }
+    if (FUELS[prev]) sel.value = prev;
+  }
+
   function update() {
     const keyA = elFuelA.value;
     const keyB = elFuelB.value;
-    const fA = FUELS[keyA];
-    const fB = FUELS[keyB];
 
     const wA_pct = parseFloat(elMassA.value);
     const wA = wA_pct / 100.0;
@@ -231,6 +292,13 @@
     elPillA.textContent = `A: ${wA_pct.toFixed(0)}%`;
     elPillB.textContent = `B: ${wB_pct.toFixed(0)}%`;
 
+    if (!keyA || !keyB || !FUELS[keyA] || !FUELS[keyB]) {
+      showWarn("Fuel selection is missing.");
+      outName.textContent = "—";
+      outRho.textContent = outLHV.textContent = outFormula.textContent = outAFR.textContent = "—";
+      return;
+    }
+
     if (keyA === keyB) {
       showWarn("Please choose two different fuels.");
       outName.textContent = "—";
@@ -238,17 +306,18 @@
       return;
     }
 
-    // Soft warnings (not blocking)
-    // Example: mixing cryogenic LCH4 with ambient jet fuels may be non-physical in practice,
-    // but mass% is at least a consistent mathematical basis for screening.
-    if ((keyA === "LCH4" && (keyB === "JetA" || keyB === "HEFA" || keyB === "FT")) ||
-        (keyB === "LCH4" && (keyA === "JetA" || keyA === "HEFA" || keyA === "FT"))) {
+    // Soft warning for cryogenic methane case (trend only)
+    if ((keyA === "LCH4" && ["JetA","HEFA","FT"].includes(keyB)) ||
+        (keyB === "LCH4" && ["JetA","HEFA","FT"].includes(keyA))) {
       showWarn("Note: Liquid methane is cryogenic; blending with Jet fuels is not a practical fuel-handling basis. Use for screening/trends only.");
     } else {
       showWarn("");
     }
 
     try {
+      const fA = FUELS[keyA];
+      const fB = FUELS[keyB];
+
       const blend = blendMass2(fA, fB, wA);
       const customName = elName.value.trim();
       blend.name = customName ? customName : `Blend(${keyA}:${wA_pct.toFixed(0)}mass%, ${keyB}:${wB_pct.toFixed(0)}mass%)`;
@@ -268,15 +337,110 @@
     }
   }
 
-  // Init
-  populate();
-  update();
+  // ---- Editor wiring
+  const elEditKey  = document.getElementById("editKey");
+  const elEditName = document.getElementById("editName");
+  const elEditXC   = document.getElementById("editXC");
+  const elEditYH   = document.getElementById("editYH");
+  const elEditZO   = document.getElementById("editZO");
+  const elEditRho  = document.getElementById("editRho");
+  const elEditLHV  = document.getElementById("editLHV");
+  const elEditMsg  = document.getElementById("editMsg");
 
-  // Live updates
+  function loadEditorFromKey(k){
+    const f = FUELS[k];
+    if (!f) return;
+    elEditName.value = f.name ?? k;
+    elEditXC.value = f.xC;
+    elEditYH.value = f.yH;
+    elEditZO.value = f.zO;
+    elEditRho.value = f.rho;
+    elEditLHV.value = f.LHV;
+  }
+
+  function refreshAllDropdowns(){
+    const a = elFuelA.value || "JetA";
+    const b = elFuelB.value || "HEFA";
+    const e = elEditKey.value || "JetA";
+
+    rebuildDropdown(elFuelA, a);
+    rebuildDropdown(elFuelB, b);
+    rebuildDropdown(elEditKey, e);
+
+    // ensure A and B differ
+    if (elFuelA.value === elFuelB.value) {
+      const keys = fuelKeys();
+      const alt = keys.find(x => x !== elFuelA.value);
+      if (alt) elFuelB.value = alt;
+    }
+
+    loadEditorFromKey(elEditKey.value);
+    update();
+  }
+
+  document.getElementById("btnSaveFuel").addEventListener("click", () => {
+    const k = (elEditKey.value || "").trim();
+    if (!k) { elEditMsg.textContent = "Error: choose a fuel key."; return; }
+
+    const name = elEditName.value.trim() || k;
+    const xC = parseFloat(elEditXC.value);
+    const yH = parseFloat(elEditYH.value);
+    const zO = parseFloat(elEditZO.value);
+    const rho = parseFloat(elEditRho.value);
+    const LHV = parseFloat(elEditLHV.value);
+
+    if (![xC,yH,zO,rho,LHV].every(v => Number.isFinite(v))) {
+      elEditMsg.textContent = "Error: numeric fields must be valid numbers.";
+      return;
+    }
+    if (xC < 0 || yH < 0 || zO < 0 || rho <= 0 || LHV <= 0) {
+      elEditMsg.textContent = "Error: non-physical values (check rho/LHV and x/y/z).";
+      return;
+    }
+
+    FUELS[k] = { name, xC, yH, zO, rho, LHV };
+    saveLocalFuels();
+    elEditMsg.textContent = `Saved '${k}'. (Stored locally in this browser.)`;
+    refreshAllDropdowns();
+  });
+
+  document.getElementById("btnNewFuel").addEventListener("click", () => {
+    const newKey = prompt("Enter new fuel key (e.g., eKero):");
+    if (!newKey) return;
+    const k = newKey.trim();
+    if (!k) return;
+
+    if (!FUELS[k]) {
+      FUELS[k] = { name: k, xC: 12, yH: 26, zO: 0, rho: 780, LHV: 43.3 };
+      saveLocalFuels();
+    }
+    refreshAllDropdowns();
+    elEditKey.value = k;
+    loadEditorFromKey(k);
+    elEditMsg.textContent = `Created '${k}'. Update x/y/z/rho/LHV then click Save.`;
+  });
+
+  document.getElementById("btnResetLocal").addEventListener("click", () => {
+    if (!confirm("Reset local edits? This removes fuels saved in THIS browser only.")) return;
+    resetLocalFuels();
+    elEditMsg.textContent = "Local edits cleared. Back to defaults.";
+    refreshAllDropdowns();
+  });
+
+  elEditKey.addEventListener("change", () => loadEditorFromKey(elEditKey.value));
+
+  // ---- Live updates
   elFuelA.addEventListener("change", update);
   elFuelB.addEventListener("change", update);
   elMassA.addEventListener("input", update);
   elName.addEventListener("input", update);
+
+  // ---- Init
+  rebuildDropdown(elFuelA, "JetA");
+  rebuildDropdown(elFuelB, "HEFA");
+  rebuildDropdown(elEditKey, "JetA");
+  loadEditorFromKey(elEditKey.value);
+  update();
 </script>
 </body>
 </html>
