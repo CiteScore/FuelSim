@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fuel Blend Calculator (Mass %)</title>
+  <style>
+    :root{
+      --bg:#0b1220; --card:#121a2b; --card2:#0f1726; --text:#e7eefc; --muted:#a7b4d1;
+      --line:rgba(255,255,255,.10); --accent:#62a8ff; --warn:#ffcc66;
+    }
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    body{margin:0;background:linear-gradient(180deg,#0b1220,#070c16);color:var(--text)}
+    .wrap{max-width:1020px;margin:0 auto;padding:24px}
+    .topbar{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+    .title{font-size:20px;font-weight:700;margin:0}
+    .subtitle{margin:6px 0 0;color:var(--muted);font-size:13px;line-height:1.4}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+    @media (max-width:900px){ .grid{grid-template-columns:1fr} }
+    .card{background:rgba(18,26,43,.92);border:1px solid var(--line);border-radius:14px;padding:16px}
+    .card h3{margin:0 0 10px;font-size:14px;letter-spacing:.2px;color:#d8e4ff}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:520px){ .row{grid-template-columns:1fr} }
+    label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
+    select,input[type="text"]{
+      width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);
+      background:var(--card2);color:var(--text);outline:none
+    }
+    input[type="range"]{width:100%}
+    .sliderline{display:flex;align-items:center;gap:10px}
+    .pill{
+      padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.04);
+      font-size:12px;color:var(--text);min-width:110px;text-align:center
+    }
+    .kv{display:grid;grid-template-columns:1.2fr 1fr;gap:8px;margin-top:10px}
+    .k{color:var(--muted);font-size:12px;padding:10px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.03)}
+    .v{font-size:12px;padding:10px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.02);text-align:right}
+    .note{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.45}
+    .warn{
+      margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,204,102,.35);
+      background:rgba(255,204,102,.08);color:var(--warn);font-size:12px;line-height:1.45;display:none
+    }
+    .footer{margin-top:14px;color:var(--muted);font-size:11px}
+    .small{font-size:11px;color:var(--muted)}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div>
+        <p class="title">Fuel Blend Calculator</p>
+        <p class="subtitle">
+          Two-component blending by <b>mass %</b>. Live outputs: density, LHV, surrogate formula, and AFR<sub>st</sub>.
+        </p>
+      </div>
+      <div class="small">
+        Basis: <b>mass%</b> (A + B = 100)
+        <div class="footer">Designed for transparent, trend-focused screening.</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- Inputs -->
+      <div class="card">
+        <h3>Inputs</h3>
+
+        <div class="row">
+          <div>
+            <label for="fuelA">Fuel A</label>
+            <select id="fuelA"></select>
+          </div>
+          <div>
+            <label for="fuelB">Fuel B</label>
+            <select id="fuelB"></select>
+          </div>
+        </div>
+
+        <label>Blend ratio (mass %)</label>
+        <div class="sliderline">
+          <div class="pill" id="pillA">A: 70%</div>
+          <input id="massA" type="range" min="0" max="100" step="1" value="70" />
+          <div class="pill" id="pillB">B: 30%</div>
+        </div>
+
+        <label for="blendName">Optional blend name</label>
+        <input id="blendName" type="text" placeholder="Leave blank for auto-name" />
+
+        <div class="note">
+          <b>Reference density field:</b> uses each fuel’s stated reference density (often 15°C for Jet fuels; cryogenic for LCH₄).<br/>
+          Mixing uses specific-volume rule (engineering approximation).
+        </div>
+
+        <div class="warn" id="warnBox"></div>
+      </div>
+
+      <!-- Outputs -->
+      <div class="card">
+        <h3>Outputs (Live)</h3>
+
+        <div class="kv">
+          <div class="k">Blend name</div>
+          <div class="v mono" id="outName">—</div>
+
+          <div class="k">Density ρ<sub>ref</sub> (kg/m³)</div>
+          <div class="v mono" id="outRho">—</div>
+
+          <div class="k">LHV (MJ/kg)</div>
+          <div class="v mono" id="outLHV">—</div>
+
+          <div class="k">Surrogate formula</div>
+          <div class="v mono" id="outFormula">—</div>
+
+          <div class="k">AFR<sub>st</sub> (kg air / kg fuel)</div>
+          <div class="v mono" id="outAFR">—</div>
+        </div>
+
+        <div class="note">
+          AFR<sub>st</sub> computed from surrogate formula: C<sub>x</sub>H<sub>y</sub>O<sub>z</sub><br/>
+          νO₂ = x + y/4 − z/2; AFR<sub>st</sub> = (νO₂·MW(O₂)) / (MW(fuel)·Y<sub>O₂</sub>) with Y<sub>O₂</sub>=0.232.
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span class="mono">Note:</span> This tool is intended for engineering screening and relative trends. It does not replace certification testing.
+    </div>
+  </div>
+
+<script>
+  // ---- Constants (engineering approximations)
+  const Y_O2_AIR = 0.232;
+  const MW = { C: 12.011, H: 1.008, O: 15.999, O2: 31.998 };
+
+  // ---- Fuel database (edit these values as you wish)
+  // Fields:
+  //  xC,yH,zO: surrogate formula CxHyOz
+  //  rho: reference density kg/m^3 (often 15C for liquids; cryogenic for LCH4)
+  //  LHV: MJ/kg
+  const FUELS = {
+    JetA: { name: "Jet-A (rep)",      xC: 11.4, yH: 22.1, zO: 0.0, rho: 803.0, LHV: 43.06 },
+    HEFA: { name: "HEFA-SPK (rep)",   xC: 11.6, yH: 25.2, zO: 0.0, rho: 752.0, LHV: 44.18 },
+    FT:   { name: "FT-SPK (surr)",    xC: 12.0, yH: 26.0, zO: 0.0, rho: 760.0, LHV: 43.50 },
+    LCH4: { name: "Liquid Methane",   xC:  1.0, yH:  4.0, zO: 0.0, rho: 420.0, LHV: 50.00 }
+  };
+
+  // ---- Chemistry helpers
+  function mwFuel(f) {
+    return f.xC*MW.C + f.yH*MW.H + f.zO*MW.O;
+  }
+  function nuO2Stoich(f) {
+    return f.xC + f.yH/4.0 - f.zO/2.0;
+  }
+  function afrStoichMass(f) {
+    const nu = nuO2Stoich(f);
+    if (nu <= 0) throw new Error("Non-physical stoichiometric O2 requirement.");
+    const mwf = mwFuel(f);
+    if (mwf <= 0) throw new Error("Non-physical fuel molecular weight.");
+    const mO2 = nu * MW.O2;
+    return mO2 / (mwf * Y_O2_AIR);
+  }
+
+  // ---- Mass% blend (two components)
+  // LHV: mass-fraction weighted
+  // rho: specific-volume mixing using mass fractions: 1/rho = Σ(w_i/rho_i)
+  // formula: mass-fraction weighted surrogate
+  function blendMass2(fA, fB, wA) {
+    const wB = 1 - wA;
+    const LHV = wA*fA.LHV + wB*fB.LHV;
+
+    const invRho = (wA / fA.rho) + (wB / fB.rho);
+    const rho = 1 / invRho;
+
+    const xC = wA*fA.xC + wB*fB.xC;
+    const yH = wA*fA.yH + wB*fB.yH;
+    const zO = wA*fA.zO + wB*fB.zO;
+
+    return { name:"", xC, yH, zO, rho, LHV };
+  }
+
+  // ---- UI wiring
+  const elFuelA = document.getElementById("fuelA");
+  const elFuelB = document.getElementById("fuelB");
+  const elMassA = document.getElementById("massA");
+  const elPillA = document.getElementById("pillA");
+  const elPillB = document.getElementById("pillB");
+  const elName  = document.getElementById("blendName");
+
+  const outName = document.getElementById("outName");
+  const outRho  = document.getElementById("outRho");
+  const outLHV  = document.getElementById("outLHV");
+  const outFormula = document.getElementById("outFormula");
+  const outAFR  = document.getElementById("outAFR");
+
+  const warnBox = document.getElementById("warnBox");
+
+  function fmt(x, n=3){ return Number(x).toFixed(n); }
+
+  function populate() {
+    const keys = Object.keys(FUELS);
+    for (const k of keys) {
+      const optA = document.createElement("option");
+      optA.value = k; optA.textContent = `${k} — ${FUELS[k].name}`;
+      elFuelA.appendChild(optA);
+
+      const optB = document.createElement("option");
+      optB.value = k; optB.textContent = `${k} — ${FUELS[k].name}`;
+      elFuelB.appendChild(optB);
+    }
+    elFuelA.value = "JetA";
+    elFuelB.value = "HEFA";
+  }
+
+  function showWarn(msg){
+    if (!msg){ warnBox.style.display="none"; warnBox.textContent=""; return; }
+    warnBox.style.display="block";
+    warnBox.textContent = msg;
+  }
+
+  function update() {
+    const keyA = elFuelA.value;
+    const keyB = elFuelB.value;
+    const fA = FUELS[keyA];
+    const fB = FUELS[keyB];
+
+    const wA_pct = parseFloat(elMassA.value);
+    const wA = wA_pct / 100.0;
+    const wB_pct = 100 - wA_pct;
+
+    elPillA.textContent = `A: ${wA_pct.toFixed(0)}%`;
+    elPillB.textContent = `B: ${wB_pct.toFixed(0)}%`;
+
+    if (keyA === keyB) {
+      showWarn("Please choose two different fuels.");
+      outName.textContent = "—";
+      outRho.textContent = outLHV.textContent = outFormula.textContent = outAFR.textContent = "—";
+      return;
+    }
+
+    // Soft warnings (not blocking)
+    // Example: mixing cryogenic LCH4 with ambient jet fuels may be non-physical in practice,
+    // but mass% is at least a consistent mathematical basis for screening.
+    if ((keyA === "LCH4" && (keyB === "JetA" || keyB === "HEFA" || keyB === "FT")) ||
+        (keyB === "LCH4" && (keyA === "JetA" || keyA === "HEFA" || keyA === "FT"))) {
+      showWarn("Note: Liquid methane is cryogenic; blending with Jet fuels is not a practical fuel-handling basis. Use for screening/trends only.");
+    } else {
+      showWarn("");
+    }
+
+    try {
+      const blend = blendMass2(fA, fB, wA);
+      const customName = elName.value.trim();
+      blend.name = customName ? customName : `Blend(${keyA}:${wA_pct.toFixed(0)}mass%, ${keyB}:${wB_pct.toFixed(0)}mass%)`;
+
+      const afr = afrStoichMass(blend);
+
+      outName.textContent = blend.name;
+      outRho.textContent  = fmt(blend.rho, 2);
+      outLHV.textContent  = fmt(blend.LHV, 3);
+      outFormula.textContent = `C${fmt(blend.xC,3)}H${fmt(blend.yH,3)}O${fmt(blend.zO,3)}`;
+      outAFR.textContent  = fmt(afr, 3);
+
+    } catch (e) {
+      showWarn("Computation error: " + (e?.message || e));
+      outName.textContent = "—";
+      outRho.textContent = outLHV.textContent = outFormula.textContent = outAFR.textContent = "—";
+    }
+  }
+
+  // Init
+  populate();
+  update();
+
+  // Live updates
+  elFuelA.addEventListener("change", update);
+  elFuelB.addEventListener("change", update);
+  elMassA.addEventListener("input", update);
+  elName.addEventListener("input", update);
+</script>
+</body>
+</html>
