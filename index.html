@@ -71,7 +71,10 @@
       <div class="card">
         <h3>Inputs</h3>
 
-        <div class="row">
+        <label for="fuelSearch">Search fuels (key or name)</label>
+        <input id="fuelSearch" type="text" placeholder="Type to filter dropdowns (e.g., HEFA, aromatic, ethanol, methane...)" />
+
+        <div class="row" style="margin-top:8px">
           <div>
             <label for="fuelA">Fuel A</label>
             <select id="fuelA"></select>
@@ -93,7 +96,7 @@
         <input id="blendName" type="text" placeholder="Leave blank for auto-name" />
 
         <div class="note">
-          <b>Reference density field:</b> uses each fuel’s stated reference density (often 15°C for Jet fuels; cryogenic for LCH₄).<br/>
+          <b>Reference density field:</b> uses each fuel’s stated reference density (often 15°C for liquids; cryogenic for LCH₄).<br/>
           Mixing uses specific-volume rule (engineering approximation).
         </div>
 
@@ -181,86 +184,77 @@
   const Y_O2_AIR = 0.232;
   const MW = { C: 12.011, H: 1.008, O: 15.999, O2: 31.998 };
 
-  // ---- Default fuel database (do not mutate directly)
+  // ---- Category order for dropdown grouping
+  const CAT_ORDER = [
+    "Conventional Jet",
+    "SAF (Paraffinic)",
+    "SAF (Cyclo/Aromatic)",
+    "Oxygenated e-fuels (screening)",
+    "Pure-component references",
+    "Oxygenates (validation)",
+    "Diesel/Gasoline (screening)",
+    "Gases (stoichiometry checks)",
+    "User (local)"
+  ];
+
+  // ---- Default fuel database (screening surrogates; edit as needed)
   const DEFAULT_FUELS = {
-  // =========================
-  // Conventional jet surrogates
-  // =========================
-  JetA:        { name: "Jet-A (rep)",                  xC: 11.40, yH: 22.10, zO: 0.00, rho: 803.0, LHV: 43.06 },
-  JetA_light:  { name: "Jet-A (lighter cut)",          xC: 10.80, yH: 21.60, zO: 0.00, rho: 790.0, LHV: 43.20 },
-  JetA_heavy:  { name: "Jet-A (heavier cut)",          xC: 12.20, yH: 23.20, zO: 0.00, rho: 820.0, LHV: 42.90 },
-  JetA_hiAro:  { name: "Jet fuel (higher aromatics)",  xC: 10.80, yH: 17.50, zO: 0.00, rho: 840.0, LHV: 42.00 },
-  JetA_loAro:  { name: "Jet fuel (low aromatics)",     xC: 11.80, yH: 25.50, zO: 0.00, rho: 770.0, LHV: 43.90 },
+    // Conventional / baseline
+    JetA:        { cat:"Conventional Jet", name:"Jet-A (rep)",                  xC:11.40, yH:22.10, zO:0.00, rho:803.0, LHV:43.06 },
+    JetA_light:  { cat:"Conventional Jet", name:"Jet-A (lighter cut)",          xC:10.80, yH:21.60, zO:0.00, rho:790.0, LHV:43.20 },
+    JetA_heavy:  { cat:"Conventional Jet", name:"Jet-A (heavier cut)",          xC:12.20, yH:23.20, zO:0.00, rho:820.0, LHV:42.90 },
+    JetA_hiAro:  { cat:"Conventional Jet", name:"Jet fuel (higher aromatics)",  xC:10.80, yH:17.50, zO:0.00, rho:840.0, LHV:42.00 },
+    JetA_loAro:  { cat:"Conventional Jet", name:"Jet fuel (low aromatics)",     xC:11.80, yH:25.50, zO:0.00, rho:770.0, LHV:43.90 },
 
-  // =========================
-  // SAF families (paraffinic)
-  // =========================
-  HEFA:        { name: "HEFA-SPK (rep)",               xC: 11.60, yH: 25.20, zO: 0.00, rho: 752.0, LHV: 44.18 },
-  FT:          { name: "FT-SPK (rep)",                 xC: 12.00, yH: 26.00, zO: 0.00, rho: 760.0, LHV: 43.50 },
-  ATJ:         { name: "ATJ-SPK (rep)",                xC: 11.30, yH: 24.80, zO: 0.00, rho: 760.0, LHV: 43.80 },
-  SIP:         { name: "SIP (iso-paraffinic)",         xC: 11.00, yH: 24.00, zO: 0.00, rho: 750.0, LHV: 44.00 },
-  HFS_SPK:     { name: "Hydroprocessed sugars (HFS)",  xC: 11.20, yH: 24.40, zO: 0.00, rho: 748.0, LHV: 44.10 },
+    // SAF families (paraffinic)
+    HEFA:        { cat:"SAF (Paraffinic)", name:"HEFA-SPK (rep)",               xC:11.60, yH:25.20, zO:0.00, rho:752.0, LHV:44.18 },
+    FT:          { cat:"SAF (Paraffinic)", name:"FT-SPK (rep)",                 xC:12.00, yH:26.00, zO:0.00, rho:760.0, LHV:43.50 },
+    ATJ:         { cat:"SAF (Paraffinic)", name:"ATJ-SPK (rep)",                xC:11.30, yH:24.80, zO:0.00, rho:760.0, LHV:43.80 },
+    SIP:         { cat:"SAF (Paraffinic)", name:"SIP (iso-paraffinic)",         xC:11.00, yH:24.00, zO:0.00, rho:750.0, LHV:44.00 },
+    HFS_SPK:     { cat:"SAF (Paraffinic)", name:"HFS (hydroprocessed sugars)",  xC:11.20, yH:24.40, zO:0.00, rho:748.0, LHV:44.10 },
 
-  // =========================
-  // SAF with aromatics / cycloalkanes (seal swell relevance)
-  // =========================
-  CHJ:         { name: "CHJ (cycloalkane rich)",       xC: 10.80, yH: 19.50, zO: 0.00, rho: 815.0, LHV: 42.60 },
-  FT_SKA:      { name: "FT-SKA (aromatics-containing)",xC: 10.50, yH: 16.50, zO: 0.00, rho: 850.0, LHV: 41.80 },
-  ARO_05:      { name: "Aromatics surrogate (~5%)",    xC: 11.20, yH: 21.00, zO: 0.00, rho: 815.0, LHV: 42.90 },
-  ARO_10:      { name: "Aromatics surrogate (~10%)",   xC: 10.80, yH: 19.00, zO: 0.00, rho: 840.0, LHV: 42.20 },
-  ARO_20:      { name: "Aromatics surrogate (~20%)",   xC: 10.20, yH: 16.00, zO: 0.00, rho: 870.0, LHV: 41.20 },
+    // SAF with aromatics / cycloalkanes
+    CHJ:         { cat:"SAF (Cyclo/Aromatic)", name:"CHJ (cycloalkane rich)",        xC:10.80, yH:19.50, zO:0.00, rho:815.0, LHV:42.60 },
+    FT_SKA:      { cat:"SAF (Cyclo/Aromatic)", name:"FT-SKA (aromatics-containing)", xC:10.50, yH:16.50, zO:0.00, rho:850.0, LHV:41.80 },
+    ARO_05:      { cat:"SAF (Cyclo/Aromatic)", name:"Aromatics surrogate (~5%)",     xC:11.20, yH:21.00, zO:0.00, rho:815.0, LHV:42.90 },
+    ARO_10:      { cat:"SAF (Cyclo/Aromatic)", name:"Aromatics surrogate (~10%)",    xC:10.80, yH:19.00, zO:0.00, rho:840.0, LHV:42.20 },
+    ARO_20:      { cat:"SAF (Cyclo/Aromatic)", name:"Aromatics surrogate (~20%)",    xC:10.20, yH:16.00, zO:0.00, rho:870.0, LHV:41.20 },
 
-  // =========================
-  // Oxygenated screening surrogates (not standard drop-in jet)
-  // =========================
-  eKero_O0:    { name: "e-Kerosene (no oxygen)",       xC: 12.00, yH: 26.00, zO: 0.00, rho: 775.0, LHV: 43.80 },
-  eKero_O1:    { name: "Oxygenated e-kerosene (O~1)",  xC: 12.00, yH: 24.00, zO: 1.00, rho: 820.0, LHV: 41.80 },
-  eKero_O2:    { name: "Oxygenated e-kerosene (O~2)",  xC: 12.00, yH: 24.00, zO: 2.00, rho: 840.0, LHV: 40.50 },
-  eKero_O3:    { name: "Oxygenated e-kerosene (O~3)",  xC: 12.00, yH: 24.00, zO: 3.00, rho: 860.0, LHV: 39.20 },
+    // Oxygenated screening surrogates (not drop-in jet)
+    eKero_O0:    { cat:"Oxygenated e-fuels (screening)", name:"e-Kerosene (no oxygen)",      xC:12.00, yH:26.00, zO:0.00, rho:775.0, LHV:43.80 },
+    eKero_O1:    { cat:"Oxygenated e-fuels (screening)", name:"Oxygenated e-kerosene (O~1)", xC:12.00, yH:24.00, zO:1.00, rho:820.0, LHV:41.80 },
+    eKero_O2:    { cat:"Oxygenated e-fuels (screening)", name:"Oxygenated e-kerosene (O~2)", xC:12.00, yH:24.00, zO:2.00, rho:840.0, LHV:40.50 },
+    eKero_O3:    { cat:"Oxygenated e-fuels (screening)", name:"Oxygenated e-kerosene (O~3)", xC:12.00, yH:24.00, zO:3.00, rho:860.0, LHV:39.20 },
 
-  // =========================
-  // Simple pure-component references (useful validation)
-  // =========================
-  nDecane:     { name: "n-Decane (C10H22)",            xC: 10.00, yH: 22.00, zO: 0.00, rho: 730.0, LHV: 44.60 },
-  nDodecane:   { name: "n-Dodecane (C12H26)",          xC: 12.00, yH: 26.00, zO: 0.00, rho: 748.0, LHV: 44.00 },
-  isoOctane:   { name: "Iso-octane (C8H18)",           xC:  8.00, yH: 18.00, zO: 0.00, rho: 692.0, LHV: 44.30 },
-  Toluene:     { name: "Toluene (C7H8)",               xC:  7.00, yH:  8.00, zO: 0.00, rho: 867.0, LHV: 40.60 },
-  Xylene:      { name: "Xylene (C8H10)",               xC:  8.00, yH: 10.00, zO: 0.00, rho: 860.0, LHV: 40.00 },
-  Cyclohexane: { name: "Cyclohexane (C6H12)",          xC:  6.00, yH: 12.00, zO: 0.00, rho: 779.0, LHV: 43.30 },
+    // Pure-component references (useful validation)
+    nDecane:     { cat:"Pure-component references", name:"n-Decane (C10H22)",         xC:10.00, yH:22.00, zO:0.00, rho:730.0, LHV:44.60 },
+    nDodecane:   { cat:"Pure-component references", name:"n-Dodecane (C12H26)",       xC:12.00, yH:26.00, zO:0.00, rho:748.0, LHV:44.00 },
+    nTetradecane:{ cat:"Pure-component references", name:"n-Tetradecane (C14H30)",    xC:14.00, yH:30.00, zO:0.00, rho:763.0, LHV:43.20 },
+    isoOctane:   { cat:"Pure-component references", name:"Iso-octane (C8H18)",        xC: 8.00, yH:18.00, zO:0.00, rho:692.0, LHV:44.30 },
+    Toluene:     { cat:"Pure-component references", name:"Toluene (C7H8)",            xC: 7.00, yH: 8.00, zO:0.00, rho:867.0, LHV:40.60 },
+    Xylene:      { cat:"Pure-component references", name:"Xylene (C8H10)",            xC: 8.00, yH:10.00, zO:0.00, rho:860.0, LHV:40.00 },
+    Cyclohexane: { cat:"Pure-component references", name:"Cyclohexane (C6H12)",       xC: 6.00, yH:12.00, zO:0.00, rho:779.0, LHV:43.30 },
 
-  // =========================
-  // Alcohols / oxygenates (validation + non-jet screening)
-  // =========================
-  MeOH:        { name: "Methanol (CH4O)",              xC:  1.00, yH:  4.00, zO: 1.00, rho: 792.0, LHV: 19.90 },
-  EtOH:        { name: "Ethanol (C2H6O)",              xC:  2.00, yH:  6.00, zO: 1.00, rho: 789.0, LHV: 26.80 },
-  iPrOH:       { name: "Isopropanol (C3H8O)",          xC:  3.00, yH:  8.00, zO: 1.00, rho: 786.0, LHV: 30.00 },
-  BuOH:        { name: "n-Butanol (C4H10O)",           xC:  4.00, yH: 10.00, zO: 1.00, rho: 810.0, LHV: 33.10 },
-  MTBE:        { name: "MTBE (C5H12O)",                xC:  5.00, yH: 12.00, zO: 1.00, rho: 740.0, LHV: 35.00 },
+    // Oxygenates / alcohols (validation)
+    MeOH:        { cat:"Oxygenates (validation)", name:"Methanol (CH4O)",             xC: 1.00, yH: 4.00, zO:1.00, rho:792.0, LHV:19.90 },
+    EtOH:        { cat:"Oxygenates (validation)", name:"Ethanol (C2H6O)",             xC: 2.00, yH: 6.00, zO:1.00, rho:789.0, LHV:26.80 },
+    iPrOH:       { cat:"Oxygenates (validation)", name:"Isopropanol (C3H8O)",         xC: 3.00, yH: 8.00, zO:1.00, rho:786.0, LHV:30.00 },
+    BuOH:        { cat:"Oxygenates (validation)", name:"n-Butanol (C4H10O)",          xC: 4.00, yH:10.00, zO:1.00, rho:810.0, LHV:33.10 },
+    MTBE:        { cat:"Oxygenates (validation)", name:"MTBE (C5H12O)",               xC: 5.00, yH:12.00, zO:1.00, rho:740.0, LHV:35.00 },
 
-  // =========================
-  // Biodiesel / FAME-like screening (oxygenated heavy fuel)
-  // =========================
-  FAME_light:  { name: "FAME-like (light, O~2)",       xC: 18.00, yH: 34.00, zO: 2.00, rho: 880.0, LHV: 37.50 },
-  FAME_heavy:  { name: "FAME-like (heavy, O~2)",       xC: 20.00, yH: 38.00, zO: 2.00, rho: 885.0, LHV: 37.00 },
+    // Diesel / gasoline screening
+    Gasoline:    { cat:"Diesel/Gasoline (screening)", name:"Gasoline surrogate",      xC: 8.00, yH:18.00, zO:0.00, rho:740.0, LHV:43.50 },
+    Diesel:      { cat:"Diesel/Gasoline (screening)", name:"Diesel surrogate",        xC:14.00, yH:30.00, zO:0.00, rho:835.0, LHV:42.70 },
 
-  // =========================
-  // Gasoline / diesel screening surrogates
-  // =========================
-  Gasoline:    { name: "Gasoline surrogate",           xC:  8.00, yH: 18.00, zO: 0.00, rho: 740.0, LHV: 43.50 },
-  Diesel:      { name: "Diesel surrogate",             xC: 14.00, yH: 30.00, zO: 0.00, rho: 835.0, LHV: 42.70 },
-
-  // =========================
-  // Gases (stoichiometry checks)
-  // =========================
-  CH4:         { name: "Methane (gas, ref)",           xC:  1.00, yH:  4.00, zO: 0.00, rho:   0.656, LHV: 50.00 },
-  LCH4:        { name: "Liquid methane (cryogenic)",   xC:  1.00, yH:  4.00, zO: 0.00, rho: 420.0, LHV: 50.00 },
-  C3H8:        { name: "Propane (gas, ref)",           xC:  3.00, yH:  8.00, zO: 0.00, rho:   1.88,  LHV: 46.40 },
-  H2:          { name: "Hydrogen (gas, ref)",          xC:  0.00, yH:  2.00, zO: 0.00, rho:   0.084, LHV: 120.0 }
-};
+    // Gases (stoich checks)
+    CH4:         { cat:"Gases (stoichiometry checks)", name:"Methane (gas, ref)",     xC: 1.00, yH: 4.00, zO:0.00, rho:  0.656, LHV:50.00 },
+    LCH4:        { cat:"Gases (stoichiometry checks)", name:"Liquid methane (cryogenic)", xC:1.00, yH:4.00, zO:0.00, rho:420.0, LHV:50.00 },
+    C3H8:        { cat:"Gases (stoichiometry checks)", name:"Propane (gas, ref)",     xC: 3.00, yH: 8.00, zO:0.00, rho:  1.88,  LHV:46.40 },
+    H2:          { cat:"Gases (stoichiometry checks)", name:"Hydrogen (gas, ref)",    xC: 0.00, yH: 2.00, zO:0.00, rho:  0.084, LHV:120.0 }
+  };
 
   // ---- Working database (defaults + browser-local overrides)
   const FUELS = JSON.parse(JSON.stringify(DEFAULT_FUELS));
-
   try {
     const saved = localStorage.getItem("fuelsim_fuels");
     if (saved) {
@@ -279,12 +273,8 @@
   }
 
   // ---- Chemistry helpers
-  function mwFuel(f) {
-    return f.xC*MW.C + f.yH*MW.H + f.zO*MW.O;
-  }
-  function nuO2Stoich(f) {
-    return f.xC + f.yH/4.0 - f.zO/2.0;
-  }
+  function mwFuel(f) { return f.xC*MW.C + f.yH*MW.H + f.zO*MW.O; }
+  function nuO2Stoich(f) { return f.xC + f.yH/4.0 - f.zO/2.0; }
   function afrStoichMass(f) {
     const nu = nuO2Stoich(f);
     if (nu <= 0) throw new Error("Non-physical stoichiometric O2 requirement.");
@@ -295,24 +285,19 @@
   }
 
   // ---- Mass% blend (two components)
-  // LHV: mass-fraction weighted
-  // rho: specific-volume mixing using mass fractions: 1/rho = Σ(w_i/rho_i)
-  // formula: mass-fraction weighted surrogate
   function blendMass2(fA, fB, wA) {
     const wB = 1 - wA;
     const LHV = wA*fA.LHV + wB*fB.LHV;
-
     const invRho = (wA / fA.rho) + (wB / fB.rho);
     const rho = 1 / invRho;
-
     const xC = wA*fA.xC + wB*fB.xC;
     const yH = wA*fA.yH + wB*fB.yH;
     const zO = wA*fA.zO + wB*fB.zO;
-
     return { name:"", xC, yH, zO, rho, LHV };
   }
 
   // ---- UI elements
+  const elFuelSearch = document.getElementById("fuelSearch");
   const elFuelA = document.getElementById("fuelA");
   const elFuelB = document.getElementById("fuelB");
   const elMassA = document.getElementById("massA");
@@ -325,11 +310,9 @@
   const outLHV  = document.getElementById("outLHV");
   const outFormula = document.getElementById("outFormula");
   const outAFR  = document.getElementById("outAFR");
-
   const warnBox = document.getElementById("warnBox");
 
   function fmt(x, n=3){ return Number(x).toFixed(n); }
-
   function showWarn(msg){
     if (!msg){ warnBox.style.display="none"; warnBox.textContent=""; return; }
     warnBox.style.display="block";
@@ -338,16 +321,86 @@
 
   function fuelKeys(){ return Object.keys(FUELS).sort(); }
 
-  function rebuildDropdown(sel, keepValue){
+  function getCategory(k){
+    const f = FUELS[k];
+    if (!f) return "Unknown";
+    if (!f.cat) return "User (local)";
+    return f.cat;
+  }
+
+  function matchesFilter(k, filter){
+    if (!filter) return true;
+    const f = FUELS[k];
+    const t = filter.toLowerCase().trim();
+    const hay = (k + " " + (f?.name||"") + " " + (f?.cat||"")).toLowerCase();
+    return hay.includes(t);
+  }
+
+  function rebuildDropdownGrouped(sel, keepValue, filterText){
     const prev = keepValue ?? sel.value;
     sel.innerHTML = "";
-    for (const k of fuelKeys()){
-      const opt = document.createElement("option");
-      opt.value = k;
-      opt.textContent = `${k} — ${FUELS[k].name}`;
-      sel.appendChild(opt);
+
+    // group keys by category with order
+    const keys = fuelKeys().filter(k => matchesFilter(k, filterText));
+    const byCat = new Map();
+    for (const k of keys) {
+      const cat = getCategory(k);
+      if (!byCat.has(cat)) byCat.set(cat, []);
+      byCat.get(cat).push(k);
     }
-    if (FUELS[prev]) sel.value = prev;
+
+    let added = 0;
+
+    for (const cat of CAT_ORDER) {
+      const arr = byCat.get(cat);
+      if (!arr || arr.length === 0) continue;
+      const og = document.createElement("optgroup");
+      og.label = cat;
+      for (const k of arr) {
+        const f = FUELS[k];
+        const opt = document.createElement("option");
+        opt.value = k;
+        opt.textContent = `${k} — ${f.name}`;
+        og.appendChild(opt);
+        added++;
+      }
+      sel.appendChild(og);
+    }
+
+    // any remaining categories not in CAT_ORDER
+    for (const [cat, arr] of byCat.entries()) {
+      if (CAT_ORDER.includes(cat)) continue;
+      const og = document.createElement("optgroup");
+      og.label = cat;
+      for (const k of arr) {
+        const f = FUELS[k];
+        const opt = document.createElement("option");
+        opt.value = k;
+        opt.textContent = `${k} — ${f.name}`;
+        og.appendChild(opt);
+        added++;
+      }
+      sel.appendChild(og);
+    }
+
+    if (added === 0) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "No matches";
+      opt.disabled = true;
+      opt.selected = true;
+      sel.appendChild(opt);
+      return;
+    }
+
+    // restore selection if still available
+    if (prev && FUELS[prev] && keys.includes(prev)) {
+      sel.value = prev;
+    } else {
+      // select first available option
+      const first = keys[0];
+      if (first) sel.value = first;
+    }
   }
 
   function update() {
@@ -362,7 +415,7 @@
     elPillB.textContent = `B: ${wB_pct.toFixed(0)}%`;
 
     if (!keyA || !keyB || !FUELS[keyA] || !FUELS[keyB]) {
-      showWarn("Fuel selection is missing.");
+      showWarn("Fuel selection is missing (check filter).");
       outName.textContent = "—";
       outRho.textContent = outLHV.textContent = outFormula.textContent = outAFR.textContent = "—";
       return;
@@ -376,8 +429,8 @@
     }
 
     // Soft warning for cryogenic methane case (trend only)
-    if ((keyA === "LCH4" && ["JetA","HEFA","FT"].includes(keyB)) ||
-        (keyB === "LCH4" && ["JetA","HEFA","FT"].includes(keyA))) {
+    if ((keyA === "LCH4" && ["JetA","HEFA","FT","ATJ"].includes(keyB)) ||
+        (keyB === "LCH4" && ["JetA","HEFA","FT","ATJ"].includes(keyA))) {
       showWarn("Note: Liquid methane is cryogenic; blending with Jet fuels is not a practical fuel-handling basis. Use for screening/trends only.");
     } else {
       showWarn("");
@@ -428,22 +481,23 @@
   }
 
   function refreshAllDropdowns(){
+    const filterText = elFuelSearch.value || "";
     const a = elFuelA.value || "JetA";
     const b = elFuelB.value || "HEFA";
     const e = elEditKey.value || "JetA";
 
-    rebuildDropdown(elFuelA, a);
-    rebuildDropdown(elFuelB, b);
-    rebuildDropdown(elEditKey, e);
+    rebuildDropdownGrouped(elFuelA, a, filterText);
+    rebuildDropdownGrouped(elFuelB, b, filterText);
+    rebuildDropdownGrouped(elEditKey, e, filterText);
 
-    // ensure A and B differ
-    if (elFuelA.value === elFuelB.value) {
-      const keys = fuelKeys();
+    // ensure A and B differ when possible
+    if (elFuelA.value && elFuelB.value && elFuelA.value === elFuelB.value) {
+      const keys = fuelKeys().filter(k => matchesFilter(k, filterText));
       const alt = keys.find(x => x !== elFuelA.value);
       if (alt) elFuelB.value = alt;
     }
 
-    loadEditorFromKey(elEditKey.value);
+    if (elEditKey.value) loadEditorFromKey(elEditKey.value);
     update();
   }
 
@@ -467,7 +521,10 @@
       return;
     }
 
-    FUELS[k] = { name, xC, yH, zO, rho, LHV };
+    const existing = FUELS[k] || {};
+    const cat = existing.cat || "User (local)";
+
+    FUELS[k] = { cat, name, xC, yH, zO, rho, LHV };
     saveLocalFuels();
     elEditMsg.textContent = `Saved '${k}'. (Stored locally in this browser.)`;
     refreshAllDropdowns();
@@ -480,7 +537,7 @@
     if (!k) return;
 
     if (!FUELS[k]) {
-      FUELS[k] = { name: k, xC: 12, yH: 26, zO: 0, rho: 780, LHV: 43.3 };
+      FUELS[k] = { cat:"User (local)", name:k, xC:12, yH:26, zO:0, rho:780, LHV:43.3 };
       saveLocalFuels();
     }
     refreshAllDropdowns();
@@ -504,12 +561,11 @@
   elMassA.addEventListener("input", update);
   elName.addEventListener("input", update);
 
+  // Search filters all dropdowns live
+  elFuelSearch.addEventListener("input", () => refreshAllDropdowns());
+
   // ---- Init
-  rebuildDropdown(elFuelA, "JetA");
-  rebuildDropdown(elFuelB, "HEFA");
-  rebuildDropdown(elEditKey, "JetA");
-  loadEditorFromKey(elEditKey.value);
-  update();
+  refreshAllDropdowns();
 </script>
 </body>
 </html>
