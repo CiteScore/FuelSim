@@ -183,11 +183,80 @@
 
   // ---- Default fuel database (do not mutate directly)
   const DEFAULT_FUELS = {
-    JetA: { name: "Jet-A (rep)",      xC: 11.4, yH: 22.1, zO: 0.0, rho: 803.0, LHV: 43.06 },
-    HEFA: { name: "HEFA-SPK (rep)",   xC: 11.6, yH: 25.2, zO: 0.0, rho: 752.0, LHV: 44.18 },
-    FT:   { name: "FT-SPK (surr)",    xC: 12.0, yH: 26.0, zO: 0.0, rho: 760.0, LHV: 43.50 },
-    LCH4: { name: "Liquid Methane",   xC:  1.0, yH:  4.0, zO: 0.0, rho: 420.0, LHV: 50.00 }
-  };
+  // =========================
+  // Conventional jet surrogates
+  // =========================
+  JetA:        { name: "Jet-A (rep)",                  xC: 11.40, yH: 22.10, zO: 0.00, rho: 803.0, LHV: 43.06 },
+  JetA_light:  { name: "Jet-A (lighter cut)",          xC: 10.80, yH: 21.60, zO: 0.00, rho: 790.0, LHV: 43.20 },
+  JetA_heavy:  { name: "Jet-A (heavier cut)",          xC: 12.20, yH: 23.20, zO: 0.00, rho: 820.0, LHV: 42.90 },
+  JetA_hiAro:  { name: "Jet fuel (higher aromatics)",  xC: 10.80, yH: 17.50, zO: 0.00, rho: 840.0, LHV: 42.00 },
+  JetA_loAro:  { name: "Jet fuel (low aromatics)",     xC: 11.80, yH: 25.50, zO: 0.00, rho: 770.0, LHV: 43.90 },
+
+  // =========================
+  // SAF families (paraffinic)
+  // =========================
+  HEFA:        { name: "HEFA-SPK (rep)",               xC: 11.60, yH: 25.20, zO: 0.00, rho: 752.0, LHV: 44.18 },
+  FT:          { name: "FT-SPK (rep)",                 xC: 12.00, yH: 26.00, zO: 0.00, rho: 760.0, LHV: 43.50 },
+  ATJ:         { name: "ATJ-SPK (rep)",                xC: 11.30, yH: 24.80, zO: 0.00, rho: 760.0, LHV: 43.80 },
+  SIP:         { name: "SIP (iso-paraffinic)",         xC: 11.00, yH: 24.00, zO: 0.00, rho: 750.0, LHV: 44.00 },
+  HFS_SPK:     { name: "Hydroprocessed sugars (HFS)",  xC: 11.20, yH: 24.40, zO: 0.00, rho: 748.0, LHV: 44.10 },
+
+  // =========================
+  // SAF with aromatics / cycloalkanes (seal swell relevance)
+  // =========================
+  CHJ:         { name: "CHJ (cycloalkane rich)",       xC: 10.80, yH: 19.50, zO: 0.00, rho: 815.0, LHV: 42.60 },
+  FT_SKA:      { name: "FT-SKA (aromatics-containing)",xC: 10.50, yH: 16.50, zO: 0.00, rho: 850.0, LHV: 41.80 },
+  ARO_05:      { name: "Aromatics surrogate (~5%)",    xC: 11.20, yH: 21.00, zO: 0.00, rho: 815.0, LHV: 42.90 },
+  ARO_10:      { name: "Aromatics surrogate (~10%)",   xC: 10.80, yH: 19.00, zO: 0.00, rho: 840.0, LHV: 42.20 },
+  ARO_20:      { name: "Aromatics surrogate (~20%)",   xC: 10.20, yH: 16.00, zO: 0.00, rho: 870.0, LHV: 41.20 },
+
+  // =========================
+  // Oxygenated screening surrogates (not standard drop-in jet)
+  // =========================
+  eKero_O0:    { name: "e-Kerosene (no oxygen)",       xC: 12.00, yH: 26.00, zO: 0.00, rho: 775.0, LHV: 43.80 },
+  eKero_O1:    { name: "Oxygenated e-kerosene (O~1)",  xC: 12.00, yH: 24.00, zO: 1.00, rho: 820.0, LHV: 41.80 },
+  eKero_O2:    { name: "Oxygenated e-kerosene (O~2)",  xC: 12.00, yH: 24.00, zO: 2.00, rho: 840.0, LHV: 40.50 },
+  eKero_O3:    { name: "Oxygenated e-kerosene (O~3)",  xC: 12.00, yH: 24.00, zO: 3.00, rho: 860.0, LHV: 39.20 },
+
+  // =========================
+  // Simple pure-component references (useful validation)
+  // =========================
+  nDecane:     { name: "n-Decane (C10H22)",            xC: 10.00, yH: 22.00, zO: 0.00, rho: 730.0, LHV: 44.60 },
+  nDodecane:   { name: "n-Dodecane (C12H26)",          xC: 12.00, yH: 26.00, zO: 0.00, rho: 748.0, LHV: 44.00 },
+  isoOctane:   { name: "Iso-octane (C8H18)",           xC:  8.00, yH: 18.00, zO: 0.00, rho: 692.0, LHV: 44.30 },
+  Toluene:     { name: "Toluene (C7H8)",               xC:  7.00, yH:  8.00, zO: 0.00, rho: 867.0, LHV: 40.60 },
+  Xylene:      { name: "Xylene (C8H10)",               xC:  8.00, yH: 10.00, zO: 0.00, rho: 860.0, LHV: 40.00 },
+  Cyclohexane: { name: "Cyclohexane (C6H12)",          xC:  6.00, yH: 12.00, zO: 0.00, rho: 779.0, LHV: 43.30 },
+
+  // =========================
+  // Alcohols / oxygenates (validation + non-jet screening)
+  // =========================
+  MeOH:        { name: "Methanol (CH4O)",              xC:  1.00, yH:  4.00, zO: 1.00, rho: 792.0, LHV: 19.90 },
+  EtOH:        { name: "Ethanol (C2H6O)",              xC:  2.00, yH:  6.00, zO: 1.00, rho: 789.0, LHV: 26.80 },
+  iPrOH:       { name: "Isopropanol (C3H8O)",          xC:  3.00, yH:  8.00, zO: 1.00, rho: 786.0, LHV: 30.00 },
+  BuOH:        { name: "n-Butanol (C4H10O)",           xC:  4.00, yH: 10.00, zO: 1.00, rho: 810.0, LHV: 33.10 },
+  MTBE:        { name: "MTBE (C5H12O)",                xC:  5.00, yH: 12.00, zO: 1.00, rho: 740.0, LHV: 35.00 },
+
+  // =========================
+  // Biodiesel / FAME-like screening (oxygenated heavy fuel)
+  // =========================
+  FAME_light:  { name: "FAME-like (light, O~2)",       xC: 18.00, yH: 34.00, zO: 2.00, rho: 880.0, LHV: 37.50 },
+  FAME_heavy:  { name: "FAME-like (heavy, O~2)",       xC: 20.00, yH: 38.00, zO: 2.00, rho: 885.0, LHV: 37.00 },
+
+  // =========================
+  // Gasoline / diesel screening surrogates
+  // =========================
+  Gasoline:    { name: "Gasoline surrogate",           xC:  8.00, yH: 18.00, zO: 0.00, rho: 740.0, LHV: 43.50 },
+  Diesel:      { name: "Diesel surrogate",             xC: 14.00, yH: 30.00, zO: 0.00, rho: 835.0, LHV: 42.70 },
+
+  // =========================
+  // Gases (stoichiometry checks)
+  // =========================
+  CH4:         { name: "Methane (gas, ref)",           xC:  1.00, yH:  4.00, zO: 0.00, rho:   0.656, LHV: 50.00 },
+  LCH4:        { name: "Liquid methane (cryogenic)",   xC:  1.00, yH:  4.00, zO: 0.00, rho: 420.0, LHV: 50.00 },
+  C3H8:        { name: "Propane (gas, ref)",           xC:  3.00, yH:  8.00, zO: 0.00, rho:   1.88,  LHV: 46.40 },
+  H2:          { name: "Hydrogen (gas, ref)",          xC:  0.00, yH:  2.00, zO: 0.00, rho:   0.084, LHV: 120.0 }
+};
 
   // ---- Working database (defaults + browser-local overrides)
   const FUELS = JSON.parse(JSON.stringify(DEFAULT_FUELS));
