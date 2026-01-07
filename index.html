@@ -210,7 +210,106 @@
       overflow:auto;
     }
     .tip code{ font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; }
-  </style>
+  
+    /* ===== Interactive schematic (NEW) ===== */
+    .schemCard{
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:rgba(255,255,255,.03);
+      padding:12px;
+      margin-bottom:12px;
+    }
+    .schemTop{
+      display:flex;
+      justify-content:space-between;
+      align-items:baseline;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-bottom:8px;
+    }
+    .schemTitle{font-size:16px;color:var(--muted)}
+    .schemHint{font-size:14px;color:var(--muted)}
+    .schemSvg{
+      width:100%;
+      height:auto;
+      display:block;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:rgba(10,16,30,.35);
+    }
+    .schemLabel{font-size:24px; fill: var(--text); opacity:.94}
+    .schemSmall{font-size:20px; fill: var(--muted)}
+    .flowLine{
+      fill:none;
+      stroke: rgba(98,168,255,.95);
+      /* Use BUTT so arrowheads are not hidden behind rounded end-caps */
+      stroke-linecap: butt;
+      stroke-linejoin: round;
+      transition: stroke-width .25s ease, opacity .25s ease;
+      opacity:.92;
+    }
+    .flowLine.fuelA{ stroke: rgba(255,204,102,.92); }
+    .flowLine.fuelB{ stroke: rgba(98,168,255,.95); }
+    .flowLine.air{ stroke: rgba(170,190,255,.85); }
+    .flowLine.out{ stroke: rgba(120,255,190,.70); }
+    .unitBox{
+      fill: rgba(255,255,255,.04);
+      stroke: rgba(255,255,255,.10);
+      stroke-width:1;
+      rx:14; ry:14;
+    }
+    .chip{
+      fill: rgba(255,255,255,.05);
+      stroke: rgba(255,255,255,.12);
+      stroke-width:1;
+      rx:10; ry:10;
+    }
+
+  
+
+    /* ===== Schematic V2 (alt design) ===== */
+    .schemSvgV2{ width:100%; height:auto; display:block; }
+    .schemSvgV2 .schemFrame{
+      fill: rgba(0,0,0,.10);
+      stroke: rgba(255,255,255,.10);
+      stroke-width: 1.2;
+    }
+    .schemSvgV2 .chip{
+      fill: rgba(255,255,255,.04);
+      stroke: rgba(255,255,255,.10);
+      stroke-width: 1;
+    }
+    .schemSvgV2 .coreRing{
+      fill: rgba(255,255,255,.02);
+      stroke: rgba(255,255,255,.14);
+      stroke-width: 2.2;
+    }
+    .schemSvgV2 .coreFill{
+      fill: rgba(20,30,50,.55);
+      stroke: rgba(255,255,255,.06);
+      stroke-width: 1;
+    }
+
+    .schemSvgV2 .core text{ display:none; }
+    .schemSvgV2 .flow{
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: .85;
+      filter: url(#softGlow);
+    }
+    .schemSvgV2 .flowA{ stroke: url(#gradFuelA); }
+    .schemSvgV2 .flowB{ stroke: url(#gradFuelB); }
+    .schemSvgV2 .flowAir{ stroke: url(#gradAir); }
+    .schemSvgV2 .flowOut{ stroke: url(#gradOut); }
+
+    .schemSvgV2 .head{ pointer-events:none; }
+    .schemSvgV2 .headA{ fill: rgba(233,193,96,.95); }
+    .schemSvgV2 .headB{ fill: rgba(90,160,255,.95); }
+    .schemSvgV2 .headAir{ fill: rgba(170,190,255,.98); }
+    .schemSvgV2 .headOut{ fill: rgba(92,214,164,.98); }
+
+</style>
 </head>
 
 <body>
@@ -359,6 +458,113 @@
       <!-- Outputs -->
       <div class="card">
         <h3>Fuel blend properties </h3>
+
+        <div class="schemCard">
+          <div class="schemTop">
+            <div class="schemTitle">
+              <span class="tt" tabindex="0">
+                Interactive schematic
+                <span class="infoDot">i</span>
+                <span class="tip">
+                  <p class="tTitle">System schematic (live)</p>
+                  <p class="tDef">Arrow thickness scales with the currently selected blend ratio, AFRact (if enabled), and target thermal power Q̇ (if enabled). This is a visualization aid, not a CFD model.</p>
+                  <p class="tEq"><code>ṁf = Q̇/LHV; ṁa = AFRact·ṁf; ṁA=wA·ṁf; ṁB=wB·ṁf</code></p>
+                </span>
+              </span>
+            </div>
+            <div class="schemHint">Adjust blend %, AFRact, and Q̇ to see flows update</div>
+          </div>
+
+          <svg class="schemSvg schemSvgV2" viewBox="0 0 960 320" role="img" aria-label="Combustor schematic with fuel and air inlets">
+  <defs>
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feColorMatrix in="b" type="matrix"
+        values="1 0 0 0 0
+                0 1 0 0 0
+                0 0 1 0 0
+                0 0 0 0.55 0" result="g"/>
+      <feMerge>
+        <feMergeNode in="g"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Subtle gradients for flow strokes -->
+    <linearGradient id="gradFuelA" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="rgba(233,193,96,.20)"/>
+      <stop offset="100%" stop-color="rgba(233,193,96,.85)"/>
+    </linearGradient>
+    <linearGradient id="gradFuelB" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="rgba(90,160,255,.20)"/>
+      <stop offset="100%" stop-color="rgba(90,160,255,.85)"/>
+    </linearGradient>
+    <linearGradient id="gradAir" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="rgba(170,190,255,.20)"/>
+      <stop offset="100%" stop-color="rgba(170,190,255,.92)"/>
+    </linearGradient>
+    <linearGradient id="gradOut" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="rgba(92,214,164,.20)"/>
+      <stop offset="100%" stop-color="rgba(92,214,164,.92)"/>
+    </linearGradient>
+
+    <!-- Reusable arrowhead path (points to +X). We'll transform/scale it in JS. -->
+    <path id="triHead" d="M 0 0 L 18 6 L 0 12 Z"></path>
+  </defs>
+
+  <!-- Frame -->
+  <rect class="schemFrame" x="10" y="10" width="940" height="300" rx="18"></rect>
+
+  <!-- Nodes (cards) -->
+  <g class="node">
+    <rect class="chip" x="40" y="40" width="260" height="80" rx="14"></rect>
+    <text class="schemLabel" x="60" y="72">Fuel A</text>
+    <text class="schemSmall" id="schFuelA" x="60" y="98">—</text>
+
+    <rect class="chip" x="40" y="200" width="260" height="80" rx="14"></rect>
+    <text class="schemLabel" x="60" y="232">Fuel B</text>
+    <text class="schemSmall" id="schFuelB" x="60" y="258">—</text>
+
+    <rect class="chip" x="660" y="40" width="260" height="80" rx="14"></rect>
+    <text class="schemLabel" x="680" y="72">Air</text>
+    <text class="schemSmall" id="schAir" x="680" y="98">—</text>
+
+    <rect class="chip" x="660" y="200" width="260" height="80" rx="14"></rect>
+    <text class="schemLabel" x="680" y="232">Exhaust / Products</text>
+    <text class="schemSmall" id="schOut" x="680" y="258">—</text>
+  </g>
+
+  <!-- Combustor core -->
+  <g class="core" filter="url(#softGlow)">
+    <circle class="coreRing" cx="480" cy="160" r="66"></circle>
+    <circle class="coreFill" cx="480" cy="160" r="58"></circle>
+    <text class="schemLabel" x="480" y="152" text-anchor="middle">Combustor</text>
+    <text class="schemSmall" id="schBlendName" x="480" y="176" text-anchor="middle">Blend: —</text>
+    <text class="schemSmall" id="schEq" x="480" y="198" text-anchor="middle">CₓHᵧO_z: —</text>
+    <text class="schemSmall" id="schPhiLam" x="480" y="220" text-anchor="middle">ϕ: — | λ: —</text>
+  </g>
+
+  <!-- Flow strokes (under arrowheads) -->
+  <g class="flows">
+    <!-- fuel A to combustor -->
+    <path id="flowFuelA" class="flow flowA" d="M 300 80 C 370 80, 380 130, 420 140 C 440 145, 452 148, 465 150"></path>
+    <!-- fuel B to combustor -->
+    <path id="flowFuelB" class="flow flowB" d="M 300 240 C 370 240, 380 190, 420 180 C 440 175, 452 172, 465 170"></path>
+    <!-- air to combustor (right to left) -->
+    <path id="flowAir" class="flow flowAir" d="M 660 80 C 600 80, 585 120, 555 140 C 535 152, 520 156, 505 158"></path>
+    <!-- combustor to exhaust (left to right) -->
+    <path id="flowOut" class="flow flowOut" d="M 505 168 C 520 170, 535 176, 555 188 C 585 206, 600 240, 660 240"></path>
+  </g>
+
+  <!-- Arrowheads drawn on top (positioned by JS) -->
+  <g class="heads">
+    <use href="#triHead" id="headFuelA" class="head headA"></use>
+    <use href="#triHead" id="headFuelB" class="head headB"></use>
+    <use href="#triHead" id="headAir"   class="head headAir"></use>
+    <use href="#triHead" id="headOut"   class="head headOut"></use>
+  </g>
+</svg>
+        </div>
 
         <div class="dialGrid">
           <div class="dialCard">
@@ -817,6 +1023,47 @@
     el.style.width = (p*100).toFixed(1) + "%";
   }
 
+
+  function setFlow(el, value, vmax){
+    if (!el) return;
+    if (!Number.isFinite(value) || value <= 0 || !Number.isFinite(vmax) || vmax <= 0){
+      el.style.strokeWidth = "2";
+      el.style.opacity = "0.35";
+      return;
+    }
+    const p = clamp01(value / vmax);
+    const w = 2 + p * 12; // 2..14 px
+    el.style.strokeWidth = w.toFixed(2);
+    el.style.opacity = (0.35 + p * 0.55).toFixed(2);
+  }
+
+  function positionArrow(pathEl, headEl){
+    if (!pathEl || !headEl) return;
+    try{
+      const total = pathEl.getTotalLength();
+      if (!Number.isFinite(total) || total <= 2) return;
+      const p2 = pathEl.getPointAtLength(total);
+      const p1 = pathEl.getPointAtLength(Math.max(0, total - 1.5));
+      const ang = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
+
+      const cs = getComputedStyle(pathEl);
+      const sw = parseFloat(cs.strokeWidth) || 3;
+      const op = parseFloat(cs.opacity) || 1;
+
+      // scale arrowhead with stroke width (responsive)
+      const s = clamp(0.75, 2.6, sw / 6.0); // tuned for this SVG
+
+      // triHead tip is at (18,6) in its local coords
+      headEl.setAttribute("transform",
+        `translate(${p2.x.toFixed(2)} ${p2.y.toFixed(2)}) rotate(${ang.toFixed(2)}) scale(${s.toFixed(3)}) translate(-18 -6)`
+      );
+      headEl.style.opacity = op.toFixed(2);
+    } catch(e){
+      // ignore arrow errors
+    }
+  }
+
+
   const elFuelSearch = document.getElementById("fuelSearch");
   const elFuelA = document.getElementById("fuelA");
   const elFuelB = document.getElementById("fuelB");
@@ -869,7 +1116,27 @@
   const hbMdotF = document.getElementById("hbMdotF");
   const hbMdotA = document.getElementById("hbMdotA");
 
-  const elEditKey  = document.getElementById("editKey");
+  // schematic refs
+  const schBlendName = document.getElementById("schBlendName");
+  const schEq = document.getElementById("schEq");
+  const schFuelA = document.getElementById("schFuelA");
+  const schFuelB = document.getElementById("schFuelB");
+  const schAir = document.getElementById("schAir");
+  const schOut = document.getElementById("schOut");
+  const schPhiLam = document.getElementById("schPhiLam");
+
+  const flowFuelA = document.getElementById("flowFuelA");
+  const flowFuelB = document.getElementById("flowFuelB");
+  const flowAir = document.getElementById("flowAir");
+  const flowOut = document.getElementById("flowOut");
+
+
+  
+  const headFuelA = document.getElementById("headFuelA");
+  const headFuelB = document.getElementById("headFuelB");
+  const headAir   = document.getElementById("headAir");
+  const headOut   = document.getElementById("headOut");
+const elEditKey  = document.getElementById("editKey");
   const elEditName = document.getElementById("editName");
   const elEditXC   = document.getElementById("editXC");
   const elEditYH   = document.getElementById("editYH");
@@ -1191,6 +1458,47 @@
       } else {
         setHBar(hbMdotF, NaN, 0.0, 1.0);
         setHBar(hbMdotA, NaN, 0.0, 25.0);
+      }
+
+
+      // ---- schematic (live visualization) ----
+      try {
+        const wB = 1 - wA;
+        const blendLabel = (document.getElementById("blendName")?.value || "").trim();
+        const displayBlend = blendLabel || `${keyA} / ${keyB}`;
+
+        const afr_used = hasAFRact ? afr_act : afr_st;
+        const mdot_f_base = (hasAFRact && hasQ) ? mdot_f : 1.0;     // kg/s (normalized if sizing disabled)
+        const mdot_a_base = Number.isFinite(afr_used) ? afr_used * mdot_f_base : NaN;
+
+        const mdot_A = wA * mdot_f_base;
+        const mdot_B = wB * mdot_f_base;
+        const mdot_out = (Number.isFinite(mdot_a_base) ? mdot_a_base : 0) + mdot_f_base;
+
+        const vmax = Math.max(0.0001, mdot_A, mdot_B, (mdot_a_base||0), mdot_out);
+
+        if (schBlendName) schBlendName.textContent = `Blend: ${displayBlend} (A ${wA_pct.toFixed(0)}% / B ${wB_pct.toFixed(0)}%)`;
+        if (schEq) schEq.textContent = `CₓHᵧO_z: C${fmt(blend.xC,3)}H${fmt(blend.yH,3)}O${fmt(blend.zO,3)}`;
+
+        const tagQ = (hasQ ? ` | Q̇=${qMW.toFixed(1)} MW` : "");
+        const tagAFR = (hasAFRact ? ` | AFRact=${afr_act.toFixed(1)}` : " | AFRact=—");
+        if (schFuelA) schFuelA.textContent = `${keyA}: ṁA=${mdot_A.toFixed(4)} kg/s${tagQ}`;
+        if (schFuelB) schFuelB.textContent = `${keyB}: ṁB=${mdot_B.toFixed(4)} kg/s${tagQ}`;
+        if (schAir)   schAir.textContent   = `ṁa=${(Number.isFinite(mdot_a_base)?mdot_a_base.toFixed(4):"—")} kg/s${tagAFR}`;
+        if (schOut)   schOut.textContent   = `ṁout≈${mdot_out.toFixed(4)} kg/s (fuel+air)`;
+
+        if (schPhiLam) schPhiLam.textContent = `ϕ: ${Number.isFinite(phi)?phi.toFixed(3):"—"} | λ: ${Number.isFinite(lambda)?lambda.toFixed(3):"—"}`;
+
+        setFlow(flowFuelA, mdot_A, vmax);
+        setFlow(flowFuelB, mdot_B, vmax);
+        setFlow(flowAir, mdot_a_base, vmax);
+        setFlow(flowOut, mdot_out, vmax);
+              positionArrow(flowFuelA, headFuelA);
+        positionArrow(flowFuelB, headFuelB);
+        positionArrow(flowAir,   headAir);
+        positionArrow(flowOut,   headOut);
+} catch (e2) {
+        // ignore schematic errors to avoid blocking calculations
       }
 
     } catch (e) {
