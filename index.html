@@ -57,12 +57,12 @@
       <div>
         <p class="title">Fuel Blend Calculator</p>
         <p class="subtitle">
-          Two-component blending by <b>mass %</b>. Live outputs: density, LHV, surrogate formula, and AFR<sub>st</sub>.
+          Two-component blending by <b>mass %</b>. Live outputs: density, LHV, surrogate formula, stoichiometry, and sizing metrics.
         </p>
       </div>
       <div class="small">
         Basis: <b>mass%</b> (A + B = 100)
-        <div class="footer">Designed for transparent, trend-focused screening.</div>
+        <div class="footer">Screening tool: transparent assumptions, trend-focused.</div>
       </div>
     </div>
 
@@ -94,6 +94,30 @@
 
         <label for="blendName">Optional blend name</label>
         <input id="blendName" type="text" placeholder="Leave blank for auto-name" />
+
+        <!-- Bundle 2/3 additional operating inputs -->
+        <div style="margin-top:14px; padding:12px; border:1px solid var(--line); border-radius:12px; background:rgba(255,255,255,.03)">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
+            <div style="font-weight:700; font-size:12px; color:#d8e4ff">Operating inputs (optional)</div>
+            <div class="small">Enable φ, λ, sizing</div>
+          </div>
+
+          <div class="row" style="margin-top:10px">
+            <div>
+              <label for="afrAct">Actual AFR (kg air / kg fuel)</label>
+              <input id="afrAct" type="text" placeholder="Leave blank to skip (e.g., 18.0)" />
+            </div>
+            <div>
+              <label for="qthMW">Target thermal power Q̇ (MWₜₕ)</label>
+              <input id="qthMW" type="text" placeholder="Leave blank to skip (e.g., 10)" />
+            </div>
+          </div>
+
+          <div class="note">
+            If you provide <b>Actual AFR</b>, the tool computes equivalence ratio φ and excess-air λ.<br/>
+            If you also provide <b>Q̇</b>, the tool computes fuel/air mass flow rates.
+          </div>
+        </div>
 
         <div class="note">
           <b>Reference density field:</b> uses each fuel’s stated reference density (often 15°C for liquids; cryogenic for LCH₄).<br/>
@@ -151,6 +175,7 @@
         <h3>Outputs (Live)</h3>
 
         <div class="kv">
+          <!-- Existing -->
           <div class="k">Blend name</div>
           <div class="v mono" id="outName">—</div>
 
@@ -160,16 +185,61 @@
           <div class="k">LHV (MJ/kg)</div>
           <div class="v mono" id="outLHV">—</div>
 
+          <div class="k">LHV (MJ/L)</div>
+          <div class="v mono" id="outLHVvol">—</div>
+
           <div class="k">Surrogate formula</div>
           <div class="v mono" id="outFormula">—</div>
 
+          <div class="k">MW<sub>fuel</sub> (g/mol)</div>
+          <div class="v mono" id="outMW">—</div>
+
+          <div class="k">νO₂,st (mol O₂ / mol fuel)</div>
+          <div class="v mono" id="outNuO2">—</div>
+
           <div class="k">AFR<sub>st</sub> (kg air / kg fuel)</div>
-          <div class="v mono" id="outAFR">—</div>
+          <div class="v mono" id="outAFRst">—</div>
+
+          <!-- Bundle 1: intensities and ratios -->
+          <div class="k">CO₂ intensity (kg CO₂ / kg fuel)</div>
+          <div class="v mono" id="outCO2kgkg">—</div>
+
+          <div class="k">H₂O intensity (kg H₂O / kg fuel)</div>
+          <div class="v mono" id="outH2Okgkg">—</div>
+
+          <div class="k">CO₂ per energy (g CO₂ / kWhₜₕ)</div>
+          <div class="v mono" id="outCO2gkWh">—</div>
+
+          <div class="k">H/C (molar)</div>
+          <div class="v mono" id="outHC">—</div>
+
+          <div class="k">O/C (molar)</div>
+          <div class="v mono" id="outOC">—</div>
+
+          <!-- Bundle 2: φ, λ, heat per kg air -->
+          <div class="k">ϕ (equivalence ratio)</div>
+          <div class="v mono" id="outPhi">—</div>
+
+          <div class="k">λ (excess air)</div>
+          <div class="v mono" id="outLambda">—</div>
+
+          <div class="k">Heat per kg air q<sub>air</sub> (MJ/kg air)</div>
+          <div class="v mono" id="outQair">—</div>
+
+          <!-- Bundle 3: sizing for target power -->
+          <div class="k">Fuel flow ṁ<sub>f</sub> (kg/s) @ Q̇</div>
+          <div class="v mono" id="outMdotF">—</div>
+
+          <div class="k">Air flow ṁ<sub>a</sub> (kg/s) @ Q̇</div>
+          <div class="v mono" id="outMdotA">—</div>
         </div>
 
         <div class="note">
-          AFR<sub>st</sub> computed from surrogate formula: C<sub>x</sub>H<sub>y</sub>O<sub>z</sub><br/>
-          νO₂ = x + y/4 − z/2; AFR<sub>st</sub> = (νO₂·MW(O₂)) / (MW(fuel)·Y<sub>O₂</sub>) with Y<sub>O₂</sub>=0.232.
+          Definitions:<br/>
+          • νO₂ = x + y/4 − z/2 (complete combustion, no dissociation).<br/>
+          • CO₂/kg fuel = x·MW(CO₂)/MW(fuel). H₂O/kg fuel = (y/2)·MW(H₂O)/MW(fuel).<br/>
+          • g CO₂/kWhₜₕ converts tailpipe CO₂ intensity on an energy basis (thermal).<br/>
+          • ϕ = AFR<sub>st</sub>/AFR<sub>act</sub>, λ = 1/ϕ, q<sub>air</sub>=LHV/AFR<sub>act</sub>.
         </div>
       </div>
     </div>
@@ -182,7 +252,8 @@
 <script>
   // ---- Constants (engineering approximations)
   const Y_O2_AIR = 0.232;
-  const MW = { C: 12.011, H: 1.008, O: 15.999, O2: 31.998 };
+  const MW = { C: 12.011, H: 1.008, O: 15.999, O2: 31.998, CO2: 44.0095, H2O: 18.01528 };
+  const KWH_PER_MJ = 1.0 / 3.6; // kWh per MJ
 
   // ---- Category order for dropdown grouping
   const CAT_ORDER = [
@@ -197,7 +268,7 @@
     "User (local)"
   ];
 
-  // ---- Default fuel database (screening surrogates; edit as needed)
+  // ---- Default fuel database (screening surrogates)
   const DEFAULT_FUELS = {
     // Conventional / baseline
     JetA:        { cat:"Conventional Jet", name:"Jet-A (rep)",                  xC:11.40, yH:22.10, zO:0.00, rho:803.0, LHV:43.06 },
@@ -226,31 +297,31 @@
     eKero_O2:    { cat:"Oxygenated e-fuels (screening)", name:"Oxygenated e-kerosene (O~2)", xC:12.00, yH:24.00, zO:2.00, rho:840.0, LHV:40.50 },
     eKero_O3:    { cat:"Oxygenated e-fuels (screening)", name:"Oxygenated e-kerosene (O~3)", xC:12.00, yH:24.00, zO:3.00, rho:860.0, LHV:39.20 },
 
-    // Pure-component references (useful validation)
-    nDecane:     { cat:"Pure-component references", name:"n-Decane (C10H22)",         xC:10.00, yH:22.00, zO:0.00, rho:730.0, LHV:44.60 },
-    nDodecane:   { cat:"Pure-component references", name:"n-Dodecane (C12H26)",       xC:12.00, yH:26.00, zO:0.00, rho:748.0, LHV:44.00 },
-    nTetradecane:{ cat:"Pure-component references", name:"n-Tetradecane (C14H30)",    xC:14.00, yH:30.00, zO:0.00, rho:763.0, LHV:43.20 },
-    isoOctane:   { cat:"Pure-component references", name:"Iso-octane (C8H18)",        xC: 8.00, yH:18.00, zO:0.00, rho:692.0, LHV:44.30 },
-    Toluene:     { cat:"Pure-component references", name:"Toluene (C7H8)",            xC: 7.00, yH: 8.00, zO:0.00, rho:867.0, LHV:40.60 },
-    Xylene:      { cat:"Pure-component references", name:"Xylene (C8H10)",            xC: 8.00, yH:10.00, zO:0.00, rho:860.0, LHV:40.00 },
-    Cyclohexane: { cat:"Pure-component references", name:"Cyclohexane (C6H12)",       xC: 6.00, yH:12.00, zO:0.00, rho:779.0, LHV:43.30 },
+    // Pure-component references
+    nDecane:      { cat:"Pure-component references", name:"n-Decane (C10H22)",         xC:10.00, yH:22.00, zO:0.00, rho:730.0, LHV:44.60 },
+    nDodecane:    { cat:"Pure-component references", name:"n-Dodecane (C12H26)",       xC:12.00, yH:26.00, zO:0.00, rho:748.0, LHV:44.00 },
+    nTetradecane: { cat:"Pure-component references", name:"n-Tetradecane (C14H30)",    xC:14.00, yH:30.00, zO:0.00, rho:763.0, LHV:43.20 },
+    isoOctane:    { cat:"Pure-component references", name:"Iso-octane (C8H18)",        xC: 8.00, yH:18.00, zO:0.00, rho:692.0, LHV:44.30 },
+    Toluene:      { cat:"Pure-component references", name:"Toluene (C7H8)",            xC: 7.00, yH: 8.00, zO:0.00, rho:867.0, LHV:40.60 },
+    Xylene:       { cat:"Pure-component references", name:"Xylene (C8H10)",            xC: 8.00, yH:10.00, zO:0.00, rho:860.0, LHV:40.00 },
+    Cyclohexane:  { cat:"Pure-component references", name:"Cyclohexane (C6H12)",       xC: 6.00, yH:12.00, zO:0.00, rho:779.0, LHV:43.30 },
 
     // Oxygenates / alcohols (validation)
-    MeOH:        { cat:"Oxygenates (validation)", name:"Methanol (CH4O)",             xC: 1.00, yH: 4.00, zO:1.00, rho:792.0, LHV:19.90 },
-    EtOH:        { cat:"Oxygenates (validation)", name:"Ethanol (C2H6O)",             xC: 2.00, yH: 6.00, zO:1.00, rho:789.0, LHV:26.80 },
-    iPrOH:       { cat:"Oxygenates (validation)", name:"Isopropanol (C3H8O)",         xC: 3.00, yH: 8.00, zO:1.00, rho:786.0, LHV:30.00 },
-    BuOH:        { cat:"Oxygenates (validation)", name:"n-Butanol (C4H10O)",          xC: 4.00, yH:10.00, zO:1.00, rho:810.0, LHV:33.10 },
-    MTBE:        { cat:"Oxygenates (validation)", name:"MTBE (C5H12O)",               xC: 5.00, yH:12.00, zO:1.00, rho:740.0, LHV:35.00 },
+    MeOH:         { cat:"Oxygenates (validation)", name:"Methanol (CH4O)",             xC: 1.00, yH: 4.00, zO:1.00, rho:792.0, LHV:19.90 },
+    EtOH:         { cat:"Oxygenates (validation)", name:"Ethanol (C2H6O)",             xC: 2.00, yH: 6.00, zO:1.00, rho:789.0, LHV:26.80 },
+    iPrOH:        { cat:"Oxygenates (validation)", name:"Isopropanol (C3H8O)",         xC: 3.00, yH: 8.00, zO:1.00, rho:786.0, LHV:30.00 },
+    BuOH:         { cat:"Oxygenates (validation)", name:"n-Butanol (C4H10O)",          xC: 4.00, yH:10.00, zO:1.00, rho:810.0, LHV:33.10 },
+    MTBE:         { cat:"Oxygenates (validation)", name:"MTBE (C5H12O)",               xC: 5.00, yH:12.00, zO:1.00, rho:740.0, LHV:35.00 },
 
     // Diesel / gasoline screening
-    Gasoline:    { cat:"Diesel/Gasoline (screening)", name:"Gasoline surrogate",      xC: 8.00, yH:18.00, zO:0.00, rho:740.0, LHV:43.50 },
-    Diesel:      { cat:"Diesel/Gasoline (screening)", name:"Diesel surrogate",        xC:14.00, yH:30.00, zO:0.00, rho:835.0, LHV:42.70 },
+    Gasoline:     { cat:"Diesel/Gasoline (screening)", name:"Gasoline surrogate",      xC: 8.00, yH:18.00, zO:0.00, rho:740.0, LHV:43.50 },
+    Diesel:       { cat:"Diesel/Gasoline (screening)", name:"Diesel surrogate",        xC:14.00, yH:30.00, zO:0.00, rho:835.0, LHV:42.70 },
 
     // Gases (stoich checks)
-    CH4:         { cat:"Gases (stoichiometry checks)", name:"Methane (gas, ref)",     xC: 1.00, yH: 4.00, zO:0.00, rho:  0.656, LHV:50.00 },
-    LCH4:        { cat:"Gases (stoichiometry checks)", name:"Liquid methane (cryogenic)", xC:1.00, yH:4.00, zO:0.00, rho:420.0, LHV:50.00 },
-    C3H8:        { cat:"Gases (stoichiometry checks)", name:"Propane (gas, ref)",     xC: 3.00, yH: 8.00, zO:0.00, rho:  1.88,  LHV:46.40 },
-    H2:          { cat:"Gases (stoichiometry checks)", name:"Hydrogen (gas, ref)",    xC: 0.00, yH: 2.00, zO:0.00, rho:  0.084, LHV:120.0 }
+    CH4:          { cat:"Gases (stoichiometry checks)", name:"Methane (gas, ref)",     xC: 1.00, yH: 4.00, zO:0.00, rho:  0.656, LHV:50.00 },
+    LCH4:         { cat:"Gases (stoichiometry checks)", name:"Liquid methane (cryogenic)", xC:1.00, yH:4.00, zO:0.00, rho:420.0, LHV:50.00 },
+    C3H8:         { cat:"Gases (stoichiometry checks)", name:"Propane (gas, ref)",     xC: 3.00, yH: 8.00, zO:0.00, rho:  1.88,  LHV:46.40 },
+    H2:           { cat:"Gases (stoichiometry checks)", name:"Hydrogen (gas, ref)",    xC: 0.00, yH: 2.00, zO:0.00, rho:  0.084, LHV:120.0 }
   };
 
   // ---- Working database (defaults + browser-local overrides)
@@ -273,15 +344,33 @@
   }
 
   // ---- Chemistry helpers
-  function mwFuel(f) { return f.xC*MW.C + f.yH*MW.H + f.zO*MW.O; }
-  function nuO2Stoich(f) { return f.xC + f.yH/4.0 - f.zO/2.0; }
+  function mwFuel(f) { return f.xC*MW.C + f.yH*MW.H + f.zO*MW.O; } // g/mol
+  function nuO2Stoich(f) { return f.xC + f.yH/4.0 - f.zO/2.0; }   // mol O2 per mol fuel
   function afrStoichMass(f) {
     const nu = nuO2Stoich(f);
     if (nu <= 0) throw new Error("Non-physical stoichiometric O2 requirement.");
     const mwf = mwFuel(f);
     if (mwf <= 0) throw new Error("Non-physical fuel molecular weight.");
-    const mO2 = nu * MW.O2;
-    return mO2 / (mwf * Y_O2_AIR);
+    const mO2 = nu * MW.O2; // g O2 per mol fuel
+    return mO2 / (mwf * Y_O2_AIR); // kg_air/kg_fuel (ratio)
+  }
+  function co2IntensityKgPerKg(f){
+    const mwf = mwFuel(f);
+    if (mwf <= 0) throw new Error("Non-physical fuel molecular weight.");
+    return (f.xC * MW.CO2) / mwf; // kg/kg (since g/g)
+  }
+  function h2oIntensityKgPerKg(f){
+    const mwf = mwFuel(f);
+    if (mwf <= 0) throw new Error("Non-physical fuel molecular weight.");
+    return ((f.yH/2.0) * MW.H2O) / mwf; // kg/kg
+  }
+  function co2PerKWhth_g(f){
+    // (kg CO2/kg fuel) / (MJ/kg fuel) -> kg/MJ ; then g/kWh_th
+    const co2kgkg = co2IntensityKgPerKg(f);
+    if (f.LHV <= 0) throw new Error("Non-physical LHV.");
+    const kg_per_MJ = co2kgkg / f.LHV;
+    const kg_per_kWh = kg_per_MJ * 3.6;
+    return kg_per_kWh * 1000.0;
   }
 
   // ---- Mass% blend (two components)
@@ -304,15 +393,37 @@
   const elPillA = document.getElementById("pillA");
   const elPillB = document.getElementById("pillB");
   const elName  = document.getElementById("blendName");
+  const elAfrAct = document.getElementById("afrAct");
+  const elQthMW  = document.getElementById("qthMW");
 
   const outName = document.getElementById("outName");
   const outRho  = document.getElementById("outRho");
   const outLHV  = document.getElementById("outLHV");
+  const outLHVvol = document.getElementById("outLHVvol");
   const outFormula = document.getElementById("outFormula");
-  const outAFR  = document.getElementById("outAFR");
+  const outMW  = document.getElementById("outMW");
+  const outNuO2 = document.getElementById("outNuO2");
+  const outAFRst  = document.getElementById("outAFRst");
+
+  const outCO2kgkg = document.getElementById("outCO2kgkg");
+  const outH2Okgkg = document.getElementById("outH2Okgkg");
+  const outCO2gkWh = document.getElementById("outCO2gkWh");
+  const outHC = document.getElementById("outHC");
+  const outOC = document.getElementById("outOC");
+
+  const outPhi = document.getElementById("outPhi");
+  const outLambda = document.getElementById("outLambda");
+  const outQair = document.getElementById("outQair");
+
+  const outMdotF = document.getElementById("outMdotF");
+  const outMdotA = document.getElementById("outMdotA");
+
   const warnBox = document.getElementById("warnBox");
 
   function fmt(x, n=3){ return Number(x).toFixed(n); }
+  function fmtMaybe(x, n=3){
+    return Number.isFinite(x) ? Number(x).toFixed(n) : "—";
+  }
   function showWarn(msg){
     if (!msg){ warnBox.style.display="none"; warnBox.textContent=""; return; }
     warnBox.style.display="block";
@@ -340,7 +451,6 @@
     const prev = keepValue ?? sel.value;
     sel.innerHTML = "";
 
-    // group keys by category with order
     const keys = fuelKeys().filter(k => matchesFilter(k, filterText));
     const byCat = new Map();
     for (const k of keys) {
@@ -367,7 +477,6 @@
       sel.appendChild(og);
     }
 
-    // any remaining categories not in CAT_ORDER
     for (const [cat, arr] of byCat.entries()) {
       if (CAT_ORDER.includes(cat)) continue;
       const og = document.createElement("optgroup");
@@ -393,14 +502,19 @@
       return;
     }
 
-    // restore selection if still available
     if (prev && FUELS[prev] && keys.includes(prev)) {
       sel.value = prev;
     } else {
-      // select first available option
-      const first = keys[0];
-      if (first) sel.value = first;
+      sel.value = keys[0];
     }
+  }
+
+  function clearBundle23Outputs(){
+    outPhi.textContent = "—";
+    outLambda.textContent = "—";
+    outQair.textContent = "—";
+    outMdotF.textContent = "—";
+    outMdotA.textContent = "—";
   }
 
   function update() {
@@ -417,14 +531,22 @@
     if (!keyA || !keyB || !FUELS[keyA] || !FUELS[keyB]) {
       showWarn("Fuel selection is missing (check filter).");
       outName.textContent = "—";
-      outRho.textContent = outLHV.textContent = outFormula.textContent = outAFR.textContent = "—";
+      outRho.textContent = outLHV.textContent = outLHVvol.textContent = outFormula.textContent = "—";
+      outMW.textContent = outNuO2.textContent = outAFRst.textContent = "—";
+      outCO2kgkg.textContent = outH2Okgkg.textContent = outCO2gkWh.textContent = "—";
+      outHC.textContent = outOC.textContent = "—";
+      clearBundle23Outputs();
       return;
     }
 
     if (keyA === keyB) {
       showWarn("Please choose two different fuels.");
       outName.textContent = "—";
-      outRho.textContent = outLHV.textContent = outFormula.textContent = outAFR.textContent = "—";
+      outRho.textContent = outLHV.textContent = outLHVvol.textContent = outFormula.textContent = "—";
+      outMW.textContent = outNuO2.textContent = outAFRst.textContent = "—";
+      outCO2kgkg.textContent = outH2Okgkg.textContent = outCO2gkWh.textContent = "—";
+      outHC.textContent = outOC.textContent = "—";
+      clearBundle23Outputs();
       return;
     }
 
@@ -444,18 +566,71 @@
       const customName = elName.value.trim();
       blend.name = customName ? customName : `Blend(${keyA}:${wA_pct.toFixed(0)}mass%, ${keyB}:${wB_pct.toFixed(0)}mass%)`;
 
-      const afr = afrStoichMass(blend);
+      // Bundle 1 calculations
+      const mwf = mwFuel(blend);
+      const nuO2 = nuO2Stoich(blend);
+      const afr_st = afrStoichMass(blend);
+      const co2kgkg = co2IntensityKgPerKg(blend);
+      const h2okgkg = h2oIntensityKgPerKg(blend);
+      const co2gkWh = co2PerKWhth_g(blend);
+      const HC = (blend.xC > 0) ? (blend.yH / blend.xC) : NaN;
+      const OC = (blend.xC > 0) ? (blend.zO / blend.xC) : NaN;
+      const LHVvol = blend.LHV * blend.rho / 1000.0; // MJ/L
 
+      // Outputs: Bundle 1
       outName.textContent = blend.name;
       outRho.textContent  = fmt(blend.rho, 2);
       outLHV.textContent  = fmt(blend.LHV, 3);
+      outLHVvol.textContent = fmt(LHVvol, 3);
       outFormula.textContent = `C${fmt(blend.xC,3)}H${fmt(blend.yH,3)}O${fmt(blend.zO,3)}`;
-      outAFR.textContent  = fmt(afr, 3);
+      outMW.textContent = fmt(mwf, 3);
+      outNuO2.textContent = fmt(nuO2, 5);
+      outAFRst.textContent  = fmt(afr_st, 3);
+
+      outCO2kgkg.textContent = fmt(co2kgkg, 4);
+      outH2Okgkg.textContent = fmt(h2okgkg, 4);
+      outCO2gkWh.textContent = fmt(co2gkWh, 1);
+      outHC.textContent = fmtMaybe(HC, 4);
+      outOC.textContent = fmtMaybe(OC, 4);
+
+      // Bundle 2: φ, λ, q_air (requires actual AFR)
+      const afr_act = parseFloat((elAfrAct.value || "").trim());
+      const hasAFRact = Number.isFinite(afr_act) && afr_act > 0;
+
+      if (hasAFRact) {
+        const phi = afr_st / afr_act;
+        const lambda = 1.0 / phi;
+        const q_air = blend.LHV / afr_act; // MJ/kg air
+        outPhi.textContent = fmt(phi, 4);
+        outLambda.textContent = fmt(lambda, 4);
+        outQair.textContent = fmt(q_air, 4);
+
+        // Bundle 3: sizing (requires target thermal power)
+        const qMW = parseFloat((elQthMW.value || "").trim());
+        const hasQ = Number.isFinite(qMW) && qMW > 0;
+
+        if (hasQ) {
+          const Q_MJps = qMW; // 1 MW = 1 MJ/s
+          const mdot_f = Q_MJps / blend.LHV;     // kg/s
+          const mdot_a = afr_act * mdot_f;       // kg/s
+          outMdotF.textContent = fmt(mdot_f, 6);
+          outMdotA.textContent = fmt(mdot_a, 6);
+        } else {
+          outMdotF.textContent = "—";
+          outMdotA.textContent = "—";
+        }
+      } else {
+        clearBundle23Outputs();
+      }
 
     } catch (e) {
       showWarn("Computation error: " + (e?.message || e));
       outName.textContent = "—";
-      outRho.textContent = outLHV.textContent = outFormula.textContent = outAFR.textContent = "—";
+      outRho.textContent = outLHV.textContent = outLHVvol.textContent = outFormula.textContent = "—";
+      outMW.textContent = outNuO2.textContent = outAFRst.textContent = "—";
+      outCO2kgkg.textContent = outH2Okgkg.textContent = outCO2gkWh.textContent = "—";
+      outHC.textContent = outOC.textContent = "—";
+      clearBundle23Outputs();
     }
   }
 
@@ -490,7 +665,6 @@
     rebuildDropdownGrouped(elFuelB, b, filterText);
     rebuildDropdownGrouped(elEditKey, e, filterText);
 
-    // ensure A and B differ when possible
     if (elFuelA.value && elFuelB.value && elFuelA.value === elFuelB.value) {
       const keys = fuelKeys().filter(k => matchesFilter(k, filterText));
       const alt = keys.find(x => x !== elFuelA.value);
@@ -560,6 +734,8 @@
   elFuelB.addEventListener("change", update);
   elMassA.addEventListener("input", update);
   elName.addEventListener("input", update);
+  elAfrAct.addEventListener("input", update);
+  elQthMW.addEventListener("input", update);
 
   // Search filters all dropdowns live
   elFuelSearch.addEventListener("input", () => refreshAllDropdowns());
