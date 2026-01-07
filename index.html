@@ -49,13 +49,11 @@
     /* ===== Circular dials (SVG gauges) ===== */
     .dialGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
     @media (max-width:520px){ .dialGrid{grid-template-columns:1fr} }
-
     .dialCard{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.03);padding:12px}
     .dialTop{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
     .dialTitle{font-size:12px;color:var(--muted)}
     .dialValue{font-size:14px;font-weight:700}
     .dialUnit{font-size:11px;color:var(--muted);margin-left:6px}
-
     .dialWrap{display:flex;justify-content:center;align-items:center;margin-top:8px}
     .dialSvg{width:180px;height:110px}
     .dialTrack{stroke:rgba(255,255,255,.10);stroke-width:10;fill:none;stroke-linecap:round}
@@ -71,14 +69,38 @@
     .colTitle{font-size:12px;color:var(--muted)}
     .colValue{font-size:14px;font-weight:700}
 
-    .cols{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px;align-items:end;height:120px}
-    .col{position:relative;height:100%;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.04);overflow:hidden}
+    /* ✅ UPDATED: responsive grid (4 → 2 → 1) and no fixed parent height */
+    .cols{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0,1fr));
+      gap:10px;
+      margin-top:10px;
+      align-items:end;
+    }
+    @media (max-width: 900px){
+      .cols{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+    }
+    @media (max-width: 520px){
+      .cols{ grid-template-columns:1fr; }
+    }
+    .cols > div{ min-width:0; }
+
+    /* ✅ UPDATED: bar container has real height (not %) so fill appears */
+    .col{
+      position:relative;
+      height:120px; /* fixed bar height */
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:rgba(255,255,255,.04);
+      overflow:hidden
+    }
     .colFill{
       position:absolute;left:0;right:0;bottom:0;height:0%;
       background:linear-gradient(180deg,rgba(255,204,102,.85),rgba(255,204,102,.20));
       transition:height .25s ease;
     }
     .colLbl{margin-top:6px;font-size:11px;color:var(--muted);text-align:center}
+    .cols .small{ margin-top:4px; }
   </style>
 </head>
 
@@ -126,7 +148,6 @@
         <label for="blendName">Optional blend name</label>
         <input id="blendName" type="text" placeholder="Leave blank for auto-name" />
 
-        <!-- Bundle 2/3 additional operating inputs -->
         <div style="margin-top:14px; padding:12px; border:1px solid var(--line); border-radius:12px; background:rgba(255,255,255,.03)">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
             <div style="font-weight:700; font-size:12px; color:#d8e4ff">Operating inputs (optional)</div>
@@ -157,7 +178,7 @@
 
         <div class="warn" id="warnBox"></div>
 
-        <!-- Editable Fuel Properties (browser-local) -->
+        <!-- Edit/Add Fuel -->
         <div style="margin-top:14px; padding:12px; border:1px solid var(--line); border-radius:12px; background:rgba(255,255,255,.03)">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
             <div style="font-weight:700; font-size:12px; color:#d8e4ff">Edit / Add Fuel</div>
@@ -205,7 +226,6 @@
       <div class="card">
         <h3>Outputs (Dials + Columns)</h3>
 
-        <!-- Circular Dials -->
         <div class="dialGrid">
           <div class="dialCard">
             <div class="dialTop">
@@ -278,7 +298,6 @@
           </div>
         </div>
 
-        <!-- Column Bars -->
         <div class="colChart" style="margin-top:12px">
           <div class="colTop">
             <div class="colTitle">Key outputs (columns)</div>
@@ -332,11 +351,9 @@
   </div>
 
 <script>
-  // ---- Constants (engineering approximations)
   const Y_O2_AIR = 0.232;
   const MW = { C: 12.011, H: 1.008, O: 15.999, O2: 31.998, CO2: 44.0095, H2O: 18.01528 };
 
-  // ---- Category order for dropdown grouping
   const CAT_ORDER = [
     "Conventional Jet",
     "SAF (Paraffinic)",
@@ -349,7 +366,6 @@
     "User (local)"
   ];
 
-  // ---- Default fuel database (screening surrogates)
   const DEFAULT_FUELS = {
     JetA:        { cat:"Conventional Jet", name:"Jet-A (rep)",                  xC:11.40, yH:22.10, zO:0.00, rho:803.0, LHV:43.06 },
     JetA_light:  { cat:"Conventional Jet", name:"Jet-A (lighter cut)",          xC:10.80, yH:21.60, zO:0.00, rho:790.0, LHV:43.20 },
@@ -397,7 +413,6 @@
     H2:           { cat:"Gases (stoichiometry checks)", name:"Hydrogen (gas, ref)",    xC: 0.00, yH: 2.00, zO:0.00, rho:  0.084, LHV:120.0 }
   };
 
-  // ---- Working database (defaults + browser-local overrides)
   const FUELS = JSON.parse(JSON.stringify(DEFAULT_FUELS));
   try {
     const saved = localStorage.getItem("fuelsim_fuels");
@@ -407,44 +422,40 @@
     }
   } catch(e) {}
 
-  function saveLocalFuels(){
-    try { localStorage.setItem("fuelsim_fuels", JSON.stringify(FUELS)); } catch(e) {}
-  }
+  function saveLocalFuels(){ try { localStorage.setItem("fuelsim_fuels", JSON.stringify(FUELS)); } catch(e) {} }
   function resetLocalFuels(){
     try { localStorage.removeItem("fuelsim_fuels"); } catch(e) {}
     for (const k of Object.keys(FUELS)) delete FUELS[k];
     for (const k of Object.keys(DEFAULT_FUELS)) FUELS[k] = JSON.parse(JSON.stringify(DEFAULT_FUELS[k]));
   }
 
-  // ---- Chemistry helpers
-  function mwFuel(f) { return f.xC*MW.C + f.yH*MW.H + f.zO*MW.O; } // g/mol
-  function nuO2Stoich(f) { return f.xC + f.yH/4.0 - f.zO/2.0; }   // mol O2 per mol fuel
+  function mwFuel(f) { return f.xC*MW.C + f.yH*MW.H + f.zO*MW.O; }
+  function nuO2Stoich(f) { return f.xC + f.yH/4.0 - f.zO/2.0; }
   function afrStoichMass(f) {
     const nu = nuO2Stoich(f);
     if (nu <= 0) throw new Error("Non-physical stoichiometric O2 requirement.");
     const mwf = mwFuel(f);
     if (mwf <= 0) throw new Error("Non-physical fuel molecular weight.");
-    const mO2 = nu * MW.O2; // g O2 per mol fuel
-    return mO2 / (mwf * Y_O2_AIR); // kg_air/kg_fuel
+    const mO2 = nu * MW.O2;
+    return mO2 / (mwf * Y_O2_AIR);
   }
   function co2IntensityKgPerKg(f){
     const mwf = mwFuel(f);
     if (mwf <= 0) throw new Error("Non-physical fuel molecular weight.");
-    return (f.xC * MW.CO2) / mwf; // kg/kg (g/g)
+    return (f.xC * MW.CO2) / mwf;
   }
   function h2oIntensityKgPerKg(f){
     const mwf = mwFuel(f);
     if (mwf <= 0) throw new Error("Non-physical fuel molecular weight.");
-    return ((f.yH/2.0) * MW.H2O) / mwf; // kg/kg
+    return ((f.yH/2.0) * MW.H2O) / mwf;
   }
   function co2PerKWhth_g(f){
     const co2kgkg = co2IntensityKgPerKg(f);
     if (f.LHV <= 0) throw new Error("Non-physical LHV.");
     const kg_per_MJ = co2kgkg / f.LHV;
-    return kg_per_MJ * 3.6 * 1000.0; // g/kWh_th
+    return kg_per_MJ * 3.6 * 1000.0;
   }
 
-  // ---- Mass% blend (two components)
   function blendMass2(fA, fB, wA) {
     const wB = 1 - wA;
     const LHV = wA*fA.LHV + wB*fB.LHV;
@@ -456,7 +467,6 @@
     return { name:"", xC, yH, zO, rho, LHV };
   }
 
-  // ---- Visual helpers
   function clamp01(x){ return Math.max(0, Math.min(1, x)); }
   function fmt(x, n=3){ return Number(x).toFixed(n); }
   function showWarn(el, msg){
@@ -464,16 +474,14 @@
     el.style.display="block"; el.textContent = msg;
   }
 
-  // Dials (arc fill)
   function setDial(pathEl, value, vmin, vmax){
     if (!pathEl) return;
     if (!Number.isFinite(value)) { pathEl.style.strokeDasharray = "0 9999"; return; }
     const p = clamp01((value - vmin) / (vmax - vmin));
-    const arc = 251; // tuned for this arc path
+    const arc = 251;
     pathEl.style.strokeDasharray = `${(p*arc).toFixed(1)} 9999`;
   }
 
-  // Columns
   function setCol(el, value, vmin, vmax){
     if (!el) return;
     if (!Number.isFinite(value)) { el.style.height = "0%"; return; }
@@ -481,7 +489,6 @@
     el.style.height = (p*100).toFixed(1) + "%";
   }
 
-  // ---- UI elements
   const elFuelSearch = document.getElementById("fuelSearch");
   const elFuelA = document.getElementById("fuelA");
   const elFuelB = document.getElementById("fuelB");
@@ -493,21 +500,18 @@
   const elQthMW  = document.getElementById("qthMW");
   const warnBox = document.getElementById("warnBox");
 
-  // Visual outputs (text)
   const gLHV = document.getElementById("gLHV");
   const gRho = document.getElementById("gRho");
   const gAFRst = document.getElementById("gAFRst");
   const gPhi = document.getElementById("gPhi");
   const gCO2kWh = document.getElementById("gCO2kWh");
 
-  // Dial paths
   const dLHV = document.getElementById("dLHV");
   const dRho = document.getElementById("dRho");
   const dAFR = document.getElementById("dAFR");
   const dPhi = document.getElementById("dPhi");
   const dCO2kWh = document.getElementById("dCO2kWh");
 
-  // Column fills + value text
   const cLHVvol = document.getElementById("cLHVvol");
   const cCO2 = document.getElementById("cCO2");
   const cH2O = document.getElementById("cH2O");
@@ -518,7 +522,6 @@
   const bH2Okgkg = document.getElementById("bH2Okgkg");
   const bQair = document.getElementById("bQair");
 
-  // Compact text
   const tFormula = document.getElementById("tFormula");
   const tMW = document.getElementById("tMW");
   const tNuO2 = document.getElementById("tNuO2");
@@ -527,11 +530,7 @@
   const tMdotA = document.getElementById("tMdotA");
 
   function fuelKeys(){ return Object.keys(FUELS).sort(); }
-  function getCategory(k){
-    const f = FUELS[k];
-    if (!f) return "Unknown";
-    return f.cat || "User (local)";
-  }
+  function getCategory(k){ return FUELS[k]?.cat || "User (local)"; }
   function matchesFilter(k, filter){
     if (!filter) return true;
     const f = FUELS[k];
@@ -597,7 +596,6 @@
     else sel.value = keys[0];
   }
 
-  // ---- Editor wiring
   const elEditKey  = document.getElementById("editKey");
   const elEditName = document.getElementById("editName");
   const elEditXC   = document.getElementById("editXC");
@@ -727,16 +725,14 @@
       const customName = elName.value.trim();
       blend.name = customName ? customName : `Blend(${keyA}:${wA_pct.toFixed(0)}mass%, ${keyB}:${wB_pct.toFixed(0)}mass%)`;
 
-      // Bundle 1 calculations
       const mwf = mwFuel(blend);
       const nuO2 = nuO2Stoich(blend);
       const afr_st = afrStoichMass(blend);
       const co2kgkg = co2IntensityKgPerKg(blend);
       const h2okgkg = h2oIntensityKgPerKg(blend);
       const co2gkWh = co2PerKWhth_g(blend);
-      const LHVvol = blend.LHV * blend.rho / 1000.0; // MJ/L
+      const LHVvol = blend.LHV * blend.rho / 1000.0;
 
-      // Bundle 2/3 optional
       let phi = NaN, lambda = NaN, q_air = NaN;
       let mdot_f = NaN, mdot_a = NaN;
       let hasQ = false;
@@ -747,18 +743,17 @@
       if (hasAFRact) {
         phi = afr_st / afr_act;
         lambda = 1.0 / phi;
-        q_air = blend.LHV / afr_act; // MJ/kg air
+        q_air = blend.LHV / afr_act;
 
         const qMW = parseFloat((elQthMW.value || "").trim());
         hasQ = Number.isFinite(qMW) && qMW > 0;
         if (hasQ) {
-          const Q_MJps = qMW;        // 1 MW = 1 MJ/s
+          const Q_MJps = qMW;
           mdot_f = Q_MJps / blend.LHV;
           mdot_a = afr_act * mdot_f;
         }
       }
 
-      // ---- Visual widgets update (Dials + Columns) ----
       gLHV.textContent = fmt(blend.LHV, 2);
       setDial(dLHV, blend.LHV, 20, 50);
 
@@ -798,7 +793,6 @@
         tLambda.textContent = "—";
       }
 
-      // Compact summary
       tFormula.textContent = `C${fmt(blend.xC,3)}H${fmt(blend.yH,3)}O${fmt(blend.zO,3)}`;
       tMW.textContent = fmt(mwf, 2);
       tNuO2.textContent = fmt(nuO2, 4);
@@ -811,7 +805,6 @@
     }
   }
 
-  // ---- Live updates
   elFuelA.addEventListener("change", update);
   elFuelB.addEventListener("change", update);
   elMassA.addEventListener("input", update);
@@ -820,15 +813,12 @@
   elQthMW.addEventListener("input", update);
   elFuelSearch.addEventListener("input", () => refreshAllDropdowns());
 
-  // ---- Init dropdowns
   function initDropdowns(){
     refreshAllDropdowns();
-    // Defaults if present
     if (FUELS.JetA) elFuelB.value = "JetA";
     if (FUELS.HEFA) elFuelA.value = "HEFA";
     update();
   }
-
   initDropdowns();
 </script>
 </body>
