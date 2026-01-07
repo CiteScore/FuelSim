@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Fuel Blending Lab (Mass %)</title>
+  <title>Fuel Blend Calculator (Mass %)</title>
   <style>
     :root{
       --bg:#0b1220; --card:#121a2b; --card2:#0f1726; --text:#e7eefc; --muted:#a7b4d1;
@@ -46,28 +46,39 @@
     }
     button.primary{background:rgba(98,168,255,.18)}
 
-    /* ---- Output visual widgets ---- */
-    .outGrid{display:grid;grid-template-columns:1fr;gap:14px}
+    /* ===== Circular dials (SVG gauges) ===== */
+    .dialGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    @media (max-width:520px){ .dialGrid{grid-template-columns:1fr} }
 
-    .gauges{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-    @media (max-width:520px){ .gauges{grid-template-columns:1fr} }
+    .dialCard{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.03);padding:12px}
+    .dialTop{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+    .dialTitle{font-size:12px;color:var(--muted)}
+    .dialValue{font-size:14px;font-weight:700}
+    .dialUnit{font-size:11px;color:var(--muted);margin-left:6px}
 
-    .gaugeCard{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.03);padding:12px}
-    .gaugeTop{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-    .gaugeTitle{font-size:12px;color:var(--muted)}
-    .gaugeValue{font-size:14px;font-weight:700}
-    .gaugeUnit{font-size:11px;color:var(--muted);margin-left:6px}
-    .gaugeTrack{height:10px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line);overflow:hidden;margin-top:10px}
-    .gaugeFill{height:100%;width:0%;border-radius:999px;background:linear-gradient(90deg,rgba(98,168,255,.30),rgba(98,168,255,.95))}
-    .gaugeMinMax{display:flex;justify-content:space-between;margin-top:6px;color:var(--muted);font-size:11px}
+    .dialWrap{display:flex;justify-content:center;align-items:center;margin-top:8px}
+    .dialSvg{width:180px;height:110px}
+    .dialTrack{stroke:rgba(255,255,255,.10);stroke-width:10;fill:none;stroke-linecap:round}
+    .dialProg{
+      stroke:rgba(98,168,255,.95);stroke-width:10;fill:none;stroke-linecap:round;
+      stroke-dasharray: 0 9999; transition:stroke-dasharray .25s ease;
+    }
+    .dialMinMax{display:flex;justify-content:space-between;margin-top:6px;color:var(--muted);font-size:11px}
 
-    .bars{display:grid;grid-template-columns:1fr;gap:10px}
-    .barRow{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.03);padding:12px}
-    .barTop{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-    .barTitle{font-size:12px;color:var(--muted)}
-    .barValue{font-size:14px;font-weight:700}
-    .barTrack{height:12px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid var(--line);overflow:hidden;margin-top:10px}
-    .barFill{height:100%;width:0%;border-radius:10px;background:linear-gradient(90deg,rgba(255,204,102,.25),rgba(255,204,102,.95))}
+    /* ===== Column bars (vertical) ===== */
+    .colChart{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.03);padding:12px}
+    .colTop{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+    .colTitle{font-size:12px;color:var(--muted)}
+    .colValue{font-size:14px;font-weight:700}
+
+    .cols{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px;align-items:end;height:120px}
+    .col{position:relative;height:100%;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.04);overflow:hidden}
+    .colFill{
+      position:absolute;left:0;right:0;bottom:0;height:0%;
+      background:linear-gradient(180deg,rgba(255,204,102,.85),rgba(255,204,102,.20));
+      transition:height .25s ease;
+    }
+    .colLbl{margin-top:6px;font-size:11px;color:var(--muted);text-align:center}
   </style>
 </head>
 
@@ -75,9 +86,9 @@
   <div class="wrap">
     <div class="topbar">
       <div>
-        <p class="title">Fuel Blending Lab</p>
+        <p class="title">Fuel Blend Calculator</p>
         <p class="subtitle">
-          Two-component blending by <b>mass %</b>. Live outputs: density, LHV, surrogate formula, stoichiometry, and sizing metrics.
+          Two-component blending by <b>mass %</b>. Visual outputs: dials + columns, surrogate formula, stoichiometry, and sizing metrics.
         </p>
       </div>
       <div class="small">
@@ -190,108 +201,127 @@
         </div>
       </div>
 
-      <!-- Outputs (Visual) -->
+      <!-- Outputs -->
       <div class="card">
-        <h3>Outputs (Visual)</h3>
+        <h3>Outputs (Dials + Columns)</h3>
 
-        <div class="outGrid">
-          <!-- Gauges -->
-          <div class="gauges">
-            <div class="gaugeCard">
-              <div class="gaugeTop">
-                <div class="gaugeTitle">LHV</div>
-                <div class="gaugeValue"><span class="mono" id="gLHV">—</span><span class="gaugeUnit">MJ/kg</span></div>
-              </div>
-              <div class="gaugeTrack"><div class="gaugeFill" id="gLHVFill"></div></div>
-              <div class="gaugeMinMax"><span>20</span><span>50</span></div>
+        <!-- Circular Dials -->
+        <div class="dialGrid">
+          <div class="dialCard">
+            <div class="dialTop">
+              <div class="dialTitle">LHV</div>
+              <div class="dialValue"><span class="mono" id="gLHV">—</span><span class="dialUnit">MJ/kg</span></div>
             </div>
-
-            <div class="gaugeCard">
-              <div class="gaugeTop">
-                <div class="gaugeTitle">Density</div>
-                <div class="gaugeValue"><span class="mono" id="gRho">—</span><span class="gaugeUnit">kg/m³</span></div>
-              </div>
-              <div class="gaugeTrack"><div class="gaugeFill" id="gRhoFill"></div></div>
-              <div class="gaugeMinMax"><span>650</span><span>900</span></div>
+            <div class="dialWrap">
+              <svg class="dialSvg" viewBox="0 0 200 120">
+                <path class="dialTrack" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+                <path class="dialProg" id="dLHV" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+              </svg>
             </div>
-
-            <div class="gaugeCard">
-              <div class="gaugeTop">
-                <div class="gaugeTitle">AFRst</div>
-                <div class="gaugeValue"><span class="mono" id="gAFRst">—</span><span class="gaugeUnit">kg/kg</span></div>
-              </div>
-              <div class="gaugeTrack"><div class="gaugeFill" id="gAFRFill"></div></div>
-              <div class="gaugeMinMax"><span>5</span><span>25</span></div>
-            </div>
-
-            <div class="gaugeCard">
-              <div class="gaugeTop">
-                <div class="gaugeTitle">ϕ (needs AFRact)</div>
-                <div class="gaugeValue"><span class="mono" id="gPhi">—</span><span class="gaugeUnit">—</span></div>
-              </div>
-              <div class="gaugeTrack"><div class="gaugeFill" id="gPhiFill"></div></div>
-              <div class="gaugeMinMax"><span>0.2</span><span>2.0</span></div>
-            </div>
-
-            <div class="gaugeCard">
-              <div class="gaugeTop">
-                <div class="gaugeTitle">CO₂ per energy</div>
-                <div class="gaugeValue"><span class="mono" id="gCO2kWh">—</span><span class="gaugeUnit">g/kWhₜₕ</span></div>
-              </div>
-              <div class="gaugeTrack"><div class="gaugeFill" id="gCO2kWhFill"></div></div>
-              <div class="gaugeMinMax"><span>150</span><span>350</span></div>
-            </div>
+            <div class="dialMinMax"><span>20</span><span>50</span></div>
           </div>
 
-          <!-- Bars -->
-          <div class="bars">
-            <div class="barRow">
-              <div class="barTop">
-                <div class="barTitle">LHV (volumetric)</div>
-                <div class="barValue"><span class="mono" id="bLHVvol">—</span> <span class="gaugeUnit">MJ/L</span></div>
-              </div>
-              <div class="barTrack"><div class="barFill" id="bLHVvolFill"></div></div>
+          <div class="dialCard">
+            <div class="dialTop">
+              <div class="dialTitle">Density</div>
+              <div class="dialValue"><span class="mono" id="gRho">—</span><span class="dialUnit">kg/m³</span></div>
             </div>
-
-            <div class="barRow">
-              <div class="barTop">
-                <div class="barTitle">CO₂ intensity</div>
-                <div class="barValue"><span class="mono" id="bCO2kgkg">—</span> <span class="gaugeUnit">kg/kg</span></div>
-              </div>
-              <div class="barTrack"><div class="barFill" id="bCO2Fill"></div></div>
+            <div class="dialWrap">
+              <svg class="dialSvg" viewBox="0 0 200 120">
+                <path class="dialTrack" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+                <path class="dialProg" id="dRho" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+              </svg>
             </div>
-
-            <div class="barRow">
-              <div class="barTop">
-                <div class="barTitle">H₂O intensity</div>
-                <div class="barValue"><span class="mono" id="bH2Okgkg">—</span> <span class="gaugeUnit">kg/kg</span></div>
-              </div>
-              <div class="barTrack"><div class="barFill" id="bH2OFill"></div></div>
-            </div>
-
-            <div class="barRow">
-              <div class="barTop">
-                <div class="barTitle">Heat per kg air (needs AFRact)</div>
-                <div class="barValue"><span class="mono" id="bQair">—</span> <span class="gaugeUnit">MJ/kg air</span></div>
-              </div>
-              <div class="barTrack"><div class="barFill" id="bQairFill"></div></div>
-            </div>
+            <div class="dialMinMax"><span>650</span><span>900</span></div>
           </div>
 
-          <div class="note">
-            Formula: <span class="mono" id="tFormula">—</span> |
-            MW: <span class="mono" id="tMW">—</span> g/mol |
-            νO₂: <span class="mono" id="tNuO2">—</span> mol/mol |
-            λ: <span class="mono" id="tLambda">—</span> |
-            ṁf: <span class="mono" id="tMdotF">—</span> kg/s |
-            ṁa: <span class="mono" id="tMdotA">—</span> kg/s
+          <div class="dialCard">
+            <div class="dialTop">
+              <div class="dialTitle">AFRst</div>
+              <div class="dialValue"><span class="mono" id="gAFRst">—</span><span class="dialUnit">kg/kg</span></div>
+            </div>
+            <div class="dialWrap">
+              <svg class="dialSvg" viewBox="0 0 200 120">
+                <path class="dialTrack" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+                <path class="dialProg" id="dAFR" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+              </svg>
+            </div>
+            <div class="dialMinMax"><span>5</span><span>25</span></div>
           </div>
 
-          <div class="note">
-            Definitions (screening): νO₂ = x + y/4 − z/2; AFRst uses Y<sub>O2</sub>=0.232 (mass fraction).<br/>
-            CO₂/kg fuel = x·MW(CO₂)/MW(fuel); H₂O/kg fuel = (y/2)·MW(H₂O)/MW(fuel).<br/>
-            ϕ = AFRst/AFRact, λ = 1/ϕ, q<sub>air</sub>=LHV/AFRact. Q̇ in MW equals MJ/s.
+          <div class="dialCard">
+            <div class="dialTop">
+              <div class="dialTitle">ϕ (needs AFRact)</div>
+              <div class="dialValue"><span class="mono" id="gPhi">—</span><span class="dialUnit">—</span></div>
+            </div>
+            <div class="dialWrap">
+              <svg class="dialSvg" viewBox="0 0 200 120">
+                <path class="dialTrack" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+                <path class="dialProg" id="dPhi" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+              </svg>
+            </div>
+            <div class="dialMinMax"><span>0.2</span><span>2.0</span></div>
           </div>
+
+          <div class="dialCard">
+            <div class="dialTop">
+              <div class="dialTitle">CO₂ per energy</div>
+              <div class="dialValue"><span class="mono" id="gCO2kWh">—</span><span class="dialUnit">g/kWhₜₕ</span></div>
+            </div>
+            <div class="dialWrap">
+              <svg class="dialSvg" viewBox="0 0 200 120">
+                <path class="dialTrack" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+                <path class="dialProg" id="dCO2kWh" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+              </svg>
+            </div>
+            <div class="dialMinMax"><span>150</span><span>350</span></div>
+          </div>
+        </div>
+
+        <!-- Column Bars -->
+        <div class="colChart" style="margin-top:12px">
+          <div class="colTop">
+            <div class="colTitle">Key outputs (columns)</div>
+            <div class="colValue"><span class="small">scaled to typical ranges</span></div>
+          </div>
+
+          <div class="cols">
+            <div>
+              <div class="col"><div class="colFill" id="cLHVvol"></div></div>
+              <div class="colLbl">LHV MJ/L</div>
+              <div class="small" style="text-align:center"><span class="mono" id="bLHVvol">—</span></div>
+            </div>
+            <div>
+              <div class="col"><div class="colFill" id="cCO2"></div></div>
+              <div class="colLbl">CO₂ kg/kg</div>
+              <div class="small" style="text-align:center"><span class="mono" id="bCO2kgkg">—</span></div>
+            </div>
+            <div>
+              <div class="col"><div class="colFill" id="cH2O"></div></div>
+              <div class="colLbl">H₂O kg/kg</div>
+              <div class="small" style="text-align:center"><span class="mono" id="bH2Okgkg">—</span></div>
+            </div>
+            <div>
+              <div class="col"><div class="colFill" id="cQair"></div></div>
+              <div class="colLbl">q_air MJ/kg air</div>
+              <div class="small" style="text-align:center"><span class="mono" id="bQair">—</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="note" style="margin-top:12px">
+          Formula: <span class="mono" id="tFormula">—</span> |
+          MW: <span class="mono" id="tMW">—</span> g/mol |
+          νO₂: <span class="mono" id="tNuO2">—</span> mol/mol |
+          λ: <span class="mono" id="tLambda">—</span> |
+          ṁf: <span class="mono" id="tMdotF">—</span> kg/s |
+          ṁa: <span class="mono" id="tMdotA">—</span> kg/s
+        </div>
+
+        <div class="note">
+          Definitions (screening): νO₂ = x + y/4 − z/2; AFRst uses Y<sub>O2</sub>=0.232 (mass fraction).<br/>
+          CO₂/kg fuel = x·MW(CO₂)/MW(fuel); H₂O/kg fuel = (y/2)·MW(H₂O)/MW(fuel).<br/>
+          ϕ = AFRst/AFRact, λ = 1/ϕ, q<sub>air</sub>=LHV/AFRact. Q̇ in MW equals MJ/s.
         </div>
       </div>
     </div>
@@ -321,34 +351,29 @@
 
   // ---- Default fuel database (screening surrogates)
   const DEFAULT_FUELS = {
-    // Conventional / baseline
     JetA:        { cat:"Conventional Jet", name:"Jet-A (rep)",                  xC:11.40, yH:22.10, zO:0.00, rho:803.0, LHV:43.06 },
     JetA_light:  { cat:"Conventional Jet", name:"Jet-A (lighter cut)",          xC:10.80, yH:21.60, zO:0.00, rho:790.0, LHV:43.20 },
     JetA_heavy:  { cat:"Conventional Jet", name:"Jet-A (heavier cut)",          xC:12.20, yH:23.20, zO:0.00, rho:820.0, LHV:42.90 },
     JetA_hiAro:  { cat:"Conventional Jet", name:"Jet fuel (higher aromatics)",  xC:10.80, yH:17.50, zO:0.00, rho:840.0, LHV:42.00 },
     JetA_loAro:  { cat:"Conventional Jet", name:"Jet fuel (low aromatics)",     xC:11.80, yH:25.50, zO:0.00, rho:770.0, LHV:43.90 },
 
-    // SAF families (paraffinic)
     HEFA:        { cat:"SAF (Paraffinic)", name:"HEFA-SPK (rep)",               xC:11.60, yH:25.20, zO:0.00, rho:752.0, LHV:44.18 },
     FT:          { cat:"SAF (Paraffinic)", name:"FT-SPK (rep)",                 xC:12.00, yH:26.00, zO:0.00, rho:760.0, LHV:43.50 },
     ATJ:         { cat:"SAF (Paraffinic)", name:"ATJ-SPK (rep)",                xC:11.30, yH:24.80, zO:0.00, rho:760.0, LHV:43.80 },
     SIP:         { cat:"SAF (Paraffinic)", name:"SIP (iso-paraffinic)",         xC:11.00, yH:24.00, zO:0.00, rho:750.0, LHV:44.00 },
     HFS_SPK:     { cat:"SAF (Paraffinic)", name:"HFS (hydroprocessed sugars)",  xC:11.20, yH:24.40, zO:0.00, rho:748.0, LHV:44.10 },
 
-    // SAF with aromatics / cycloalkanes
     CHJ:         { cat:"SAF (Cyclo/Aromatic)", name:"CHJ (cycloalkane rich)",        xC:10.80, yH:19.50, zO:0.00, rho:815.0, LHV:42.60 },
     FT_SKA:      { cat:"SAF (Cyclo/Aromatic)", name:"FT-SKA (aromatics-containing)", xC:10.50, yH:16.50, zO:0.00, rho:850.0, LHV:41.80 },
     ARO_05:      { cat:"SAF (Cyclo/Aromatic)", name:"Aromatics surrogate (~5%)",     xC:11.20, yH:21.00, zO:0.00, rho:815.0, LHV:42.90 },
     ARO_10:      { cat:"SAF (Cyclo/Aromatic)", name:"Aromatics surrogate (~10%)",    xC:10.80, yH:19.00, zO:0.00, rho:840.0, LHV:42.20 },
     ARO_20:      { cat:"SAF (Cyclo/Aromatic)", name:"Aromatics surrogate (~20%)",    xC:10.20, yH:16.00, zO:0.00, rho:870.0, LHV:41.20 },
 
-    // Oxygenated screening surrogates (not drop-in jet)
     eKero_O0:    { cat:"Oxygenated e-fuels (screening)", name:"e-Kerosene (no oxygen)",      xC:12.00, yH:26.00, zO:0.00, rho:775.0, LHV:43.80 },
     eKero_O1:    { cat:"Oxygenated e-fuels (screening)", name:"Oxygenated e-kerosene (O~1)", xC:12.00, yH:24.00, zO:1.00, rho:820.0, LHV:41.80 },
     eKero_O2:    { cat:"Oxygenated e-fuels (screening)", name:"Oxygenated e-kerosene (O~2)", xC:12.00, yH:24.00, zO:2.00, rho:840.0, LHV:40.50 },
     eKero_O3:    { cat:"Oxygenated e-fuels (screening)", name:"Oxygenated e-kerosene (O~3)", xC:12.00, yH:24.00, zO:3.00, rho:860.0, LHV:39.20 },
 
-    // Pure-component references
     nDecane:      { cat:"Pure-component references", name:"n-Decane (C10H22)",         xC:10.00, yH:22.00, zO:0.00, rho:730.0, LHV:44.60 },
     nDodecane:    { cat:"Pure-component references", name:"n-Dodecane (C12H26)",       xC:12.00, yH:26.00, zO:0.00, rho:748.0, LHV:44.00 },
     nTetradecane: { cat:"Pure-component references", name:"n-Tetradecane (C14H30)",    xC:14.00, yH:30.00, zO:0.00, rho:763.0, LHV:43.20 },
@@ -357,18 +382,15 @@
     Xylene:       { cat:"Pure-component references", name:"Xylene (C8H10)",            xC: 8.00, yH:10.00, zO:0.00, rho:860.0, LHV:40.00 },
     Cyclohexane:  { cat:"Pure-component references", name:"Cyclohexane (C6H12)",       xC: 6.00, yH:12.00, zO:0.00, rho:779.0, LHV:43.30 },
 
-    // Oxygenates / alcohols (validation)
     MeOH:         { cat:"Oxygenates (validation)", name:"Methanol (CH4O)",             xC: 1.00, yH: 4.00, zO:1.00, rho:792.0, LHV:19.90 },
     EtOH:         { cat:"Oxygenates (validation)", name:"Ethanol (C2H6O)",             xC: 2.00, yH: 6.00, zO:1.00, rho:789.0, LHV:26.80 },
     iPrOH:        { cat:"Oxygenates (validation)", name:"Isopropanol (C3H8O)",         xC: 3.00, yH: 8.00, zO:1.00, rho:786.0, LHV:30.00 },
     BuOH:         { cat:"Oxygenates (validation)", name:"n-Butanol (C4H10O)",          xC: 4.00, yH:10.00, zO:1.00, rho:810.0, LHV:33.10 },
     MTBE:         { cat:"Oxygenates (validation)", name:"MTBE (C5H12O)",               xC: 5.00, yH:12.00, zO:1.00, rho:740.0, LHV:35.00 },
 
-    // Diesel / gasoline screening
     Gasoline:     { cat:"Diesel/Gasoline (screening)", name:"Gasoline surrogate",      xC: 8.00, yH:18.00, zO:0.00, rho:740.0, LHV:43.50 },
     Diesel:       { cat:"Diesel/Gasoline (screening)", name:"Diesel surrogate",        xC:14.00, yH:30.00, zO:0.00, rho:835.0, LHV:42.70 },
 
-    // Gases (stoich checks)
     CH4:          { cat:"Gases (stoichiometry checks)", name:"Methane (gas, ref)",     xC: 1.00, yH: 4.00, zO:0.00, rho:  0.656, LHV:50.00 },
     LCH4:         { cat:"Gases (stoichiometry checks)", name:"Liquid methane (cryogenic)", xC:1.00, yH:4.00, zO:0.00, rho:420.0, LHV:50.00 },
     C3H8:         { cat:"Gases (stoichiometry checks)", name:"Propane (gas, ref)",     xC: 3.00, yH: 8.00, zO:0.00, rho:  1.88,  LHV:46.40 },
@@ -403,12 +425,12 @@
     const mwf = mwFuel(f);
     if (mwf <= 0) throw new Error("Non-physical fuel molecular weight.");
     const mO2 = nu * MW.O2; // g O2 per mol fuel
-    return mO2 / (mwf * Y_O2_AIR); // kg_air/kg_fuel (ratio)
+    return mO2 / (mwf * Y_O2_AIR); // kg_air/kg_fuel
   }
   function co2IntensityKgPerKg(f){
     const mwf = mwFuel(f);
     if (mwf <= 0) throw new Error("Non-physical fuel molecular weight.");
-    return (f.xC * MW.CO2) / mwf; // kg/kg (since g/g)
+    return (f.xC * MW.CO2) / mwf; // kg/kg (g/g)
   }
   function h2oIntensityKgPerKg(f){
     const mwf = mwFuel(f);
@@ -416,12 +438,10 @@
     return ((f.yH/2.0) * MW.H2O) / mwf; // kg/kg
   }
   function co2PerKWhth_g(f){
-    // (kg CO2/kg fuel) / (MJ/kg fuel) -> kg/MJ ; then g/kWh_th
     const co2kgkg = co2IntensityKgPerKg(f);
     if (f.LHV <= 0) throw new Error("Non-physical LHV.");
     const kg_per_MJ = co2kgkg / f.LHV;
-    const kg_per_kWh = kg_per_MJ * 3.6;
-    return kg_per_kWh * 1000.0;
+    return kg_per_MJ * 3.6 * 1000.0; // g/kWh_th
   }
 
   // ---- Mass% blend (two components)
@@ -438,11 +458,27 @@
 
   // ---- Visual helpers
   function clamp01(x){ return Math.max(0, Math.min(1, x)); }
-  function setFill(el, value, vmin, vmax){
-    if (!el) return;
-    if (!Number.isFinite(value)) { el.style.width = "0%"; return; }
+  function fmt(x, n=3){ return Number(x).toFixed(n); }
+  function showWarn(el, msg){
+    if (!msg){ el.style.display="none"; el.textContent=""; return; }
+    el.style.display="block"; el.textContent = msg;
+  }
+
+  // Dials (arc fill)
+  function setDial(pathEl, value, vmin, vmax){
+    if (!pathEl) return;
+    if (!Number.isFinite(value)) { pathEl.style.strokeDasharray = "0 9999"; return; }
     const p = clamp01((value - vmin) / (vmax - vmin));
-    el.style.width = (p*100).toFixed(1) + "%";
+    const arc = 251; // tuned for this arc path
+    pathEl.style.strokeDasharray = `${(p*arc).toFixed(1)} 9999`;
+  }
+
+  // Columns
+  function setCol(el, value, vmin, vmax){
+    if (!el) return;
+    if (!Number.isFinite(value)) { el.style.height = "0%"; return; }
+    const p = clamp01((value - vmin) / (vmax - vmin));
+    el.style.height = (p*100).toFixed(1) + "%";
   }
 
   // ---- UI elements
@@ -457,26 +493,30 @@
   const elQthMW  = document.getElementById("qthMW");
   const warnBox = document.getElementById("warnBox");
 
-  // Visual outputs
+  // Visual outputs (text)
   const gLHV = document.getElementById("gLHV");
-  const gLHVFill = document.getElementById("gLHVFill");
   const gRho = document.getElementById("gRho");
-  const gRhoFill = document.getElementById("gRhoFill");
   const gAFRst = document.getElementById("gAFRst");
-  const gAFRFill = document.getElementById("gAFRFill");
   const gPhi = document.getElementById("gPhi");
-  const gPhiFill = document.getElementById("gPhiFill");
   const gCO2kWh = document.getElementById("gCO2kWh");
-  const gCO2kWhFill = document.getElementById("gCO2kWhFill");
+
+  // Dial paths
+  const dLHV = document.getElementById("dLHV");
+  const dRho = document.getElementById("dRho");
+  const dAFR = document.getElementById("dAFR");
+  const dPhi = document.getElementById("dPhi");
+  const dCO2kWh = document.getElementById("dCO2kWh");
+
+  // Column fills + value text
+  const cLHVvol = document.getElementById("cLHVvol");
+  const cCO2 = document.getElementById("cCO2");
+  const cH2O = document.getElementById("cH2O");
+  const cQair = document.getElementById("cQair");
 
   const bLHVvol = document.getElementById("bLHVvol");
-  const bLHVvolFill = document.getElementById("bLHVvolFill");
   const bCO2kgkg = document.getElementById("bCO2kgkg");
-  const bCO2Fill = document.getElementById("bCO2Fill");
   const bH2Okgkg = document.getElementById("bH2Okgkg");
-  const bH2OFill = document.getElementById("bH2OFill");
   const bQair = document.getElementById("bQair");
-  const bQairFill = document.getElementById("bQairFill");
 
   // Compact text
   const tFormula = document.getElementById("tFormula");
@@ -486,19 +526,11 @@
   const tMdotF = document.getElementById("tMdotF");
   const tMdotA = document.getElementById("tMdotA");
 
-  function fmt(x, n=3){ return Number(x).toFixed(n); }
-  function showWarn(msg){
-    if (!msg){ warnBox.style.display="none"; warnBox.textContent=""; return; }
-    warnBox.style.display="block";
-    warnBox.textContent = msg;
-  }
-
   function fuelKeys(){ return Object.keys(FUELS).sort(); }
   function getCategory(k){
     const f = FUELS[k];
     if (!f) return "Unknown";
-    if (!f.cat) return "User (local)";
-    return f.cat;
+    return f.cat || "User (local)";
   }
   function matchesFilter(k, filter){
     if (!filter) return true;
@@ -628,8 +660,8 @@
 
     const existing = FUELS[k] || {};
     const cat = existing.cat || "User (local)";
-
     FUELS[k] = { cat, name, xC, yH, zO, rho, LHV };
+
     saveLocalFuels();
     elEditMsg.textContent = `Saved '${k}'. (Stored locally in this browser.)`;
     refreshAllDropdowns();
@@ -672,21 +704,19 @@
     elPillB.textContent = `B: ${wB_pct.toFixed(0)}%`;
 
     if (!keyA || !keyB || !FUELS[keyA] || !FUELS[keyB]) {
-      showWarn("Fuel selection is missing (check filter).");
+      showWarn(warnBox, "Fuel selection is missing (check filter).");
       return;
     }
-
     if (keyA === keyB) {
-      showWarn("Please choose two different fuels.");
+      showWarn(warnBox, "Please choose two different fuels.");
       return;
     }
 
-    // Soft warning for cryogenic methane case (trend only)
     if ((keyA === "LCH4" && ["JetA","HEFA","FT","ATJ"].includes(keyB)) ||
         (keyB === "LCH4" && ["JetA","HEFA","FT","ATJ"].includes(keyA))) {
-      showWarn("Note: Liquid methane is cryogenic; blending with Jet fuels is not a practical fuel-handling basis. Use for screening/trends only.");
+      showWarn(warnBox, "Note: Liquid methane is cryogenic; blending with Jet fuels is not a practical fuel-handling basis. Use for screening/trends only.");
     } else {
-      showWarn("");
+      showWarn(warnBox, "");
     }
 
     try {
@@ -706,7 +736,7 @@
       const co2gkWh = co2PerKWhth_g(blend);
       const LHVvol = blend.LHV * blend.rho / 1000.0; // MJ/L
 
-      // Bundle 2/3 variables (ensure defined)
+      // Bundle 2/3 optional
       let phi = NaN, lambda = NaN, q_air = NaN;
       let mdot_f = NaN, mdot_a = NaN;
       let hasQ = false;
@@ -722,45 +752,49 @@
         const qMW = parseFloat((elQthMW.value || "").trim());
         hasQ = Number.isFinite(qMW) && qMW > 0;
         if (hasQ) {
-          const Q_MJps = qMW; // 1 MW = 1 MJ/s
-          mdot_f = Q_MJps / blend.LHV;     // kg/s
-          mdot_a = afr_act * mdot_f;       // kg/s
+          const Q_MJps = qMW;        // 1 MW = 1 MJ/s
+          mdot_f = Q_MJps / blend.LHV;
+          mdot_a = afr_act * mdot_f;
         }
       }
 
-      // ---- Visual widgets update ----
+      // ---- Visual widgets update (Dials + Columns) ----
       gLHV.textContent = fmt(blend.LHV, 2);
-      setFill(gLHVFill, blend.LHV, 20, 50);
+      setDial(dLHV, blend.LHV, 20, 50);
 
       gRho.textContent = fmt(blend.rho, 1);
-      setFill(gRhoFill, blend.rho, 650, 900);
+      setDial(dRho, blend.rho, 650, 900);
 
       gAFRst.textContent = fmt(afr_st, 2);
-      setFill(gAFRFill, afr_st, 5, 25);
+      setDial(dAFR, afr_st, 5, 25);
 
       gCO2kWh.textContent = fmt(co2gkWh, 1);
-      setFill(gCO2kWhFill, co2gkWh, 150, 350);
+      setDial(dCO2kWh, co2gkWh, 150, 350);
 
       bLHVvol.textContent = fmt(LHVvol, 2);
-      setFill(bLHVvolFill, LHVvol, 10, 40);
+      setCol(cLHVvol, LHVvol, 10, 40);
 
       bCO2kgkg.textContent = fmt(co2kgkg, 3);
-      setFill(bCO2Fill, co2kgkg, 1.5, 3.5);
+      setCol(cCO2, co2kgkg, 1.5, 3.5);
 
       bH2Okgkg.textContent = fmt(h2okgkg, 3);
-      setFill(bH2OFill, h2okgkg, 0.5, 2.0);
+      setCol(cH2O, h2okgkg, 0.5, 2.0);
 
       if (hasAFRact){
         gPhi.textContent = fmt(phi, 3);
-        setFill(gPhiFill, phi, 0.2, 2.0);
+        setDial(dPhi, phi, 0.2, 2.0);
 
         bQair.textContent = fmt(q_air, 3);
-        setFill(bQairFill, q_air, 0.5, 5.0);
+        setCol(cQair, q_air, 0.5, 5.0);
 
         tLambda.textContent = fmt(lambda, 3);
       } else {
-        gPhi.textContent = "—"; gPhiFill.style.width = "0%";
-        bQair.textContent = "—"; bQairFill.style.width = "0%";
+        gPhi.textContent = "—";
+        setDial(dPhi, NaN, 0.2, 2.0);
+
+        bQair.textContent = "—";
+        setCol(cQair, NaN, 0.5, 5.0);
+
         tLambda.textContent = "—";
       }
 
@@ -773,7 +807,7 @@
       tMdotA.textContent = (hasAFRact && hasQ) ? fmt(mdot_a, 6) : "—";
 
     } catch (e) {
-      showWarn("Computation error: " + (e?.message || e));
+      showWarn(warnBox, "Computation error: " + (e?.message || e));
     }
   }
 
@@ -786,8 +820,16 @@
   elQthMW.addEventListener("input", update);
   elFuelSearch.addEventListener("input", () => refreshAllDropdowns());
 
-  // ---- Init
-  refreshAllDropdowns();
+  // ---- Init dropdowns
+  function initDropdowns(){
+    refreshAllDropdowns();
+    // Defaults if present
+    if (FUELS.JetA) elFuelB.value = "JetA";
+    if (FUELS.HEFA) elFuelA.value = "HEFA";
+    update();
+  }
+
+  initDropdowns();
 </script>
 </body>
 </html>
