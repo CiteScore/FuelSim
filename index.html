@@ -101,6 +101,50 @@
     }
     .colLbl{margin-top:6px;font-size:11px;color:var(--muted);text-align:center}
     .cols .small{ margin-top:4px; }
+
+    /* ===== Horizontal bars for summary (NEW) ===== */
+    .barBox{
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:rgba(255,255,255,.03);
+      padding:12px;
+      margin-top:12px;
+    }
+    .barTitleRow{
+      display:flex;
+      justify-content:space-between;
+      align-items:baseline;
+      gap:10px;
+      margin-bottom:8px;
+    }
+    .barTitle{font-size:12px;color:var(--muted)}
+    .barRow{
+      display:grid;
+      grid-template-columns: 140px 1fr 90px;
+      gap:10px;
+      align-items:center;
+      padding:6px 0;
+    }
+    @media (max-width:520px){
+      .barRow{ grid-template-columns: 1fr; }
+      .barVal{ text-align:left; }
+    }
+    .barLbl{font-size:12px;color:var(--muted)}
+    .barText{font-size:12px;color:var(--text);opacity:.95}
+    .barTrack{
+      height:10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.04);
+      overflow:hidden;
+    }
+    .barFill{
+      height:100%;
+      width:0%;
+      background:linear-gradient(90deg, rgba(98,168,255,.95), rgba(255,204,102,.70));
+      transition:width .25s ease;
+    }
+    .barVal{font-size:12px;text-align:right}
   </style>
 </head>
 
@@ -328,13 +372,48 @@
           </div>
         </div>
 
-        <div class="note" style="margin-top:12px">
-          Formula: <span class="mono" id="tFormula">—</span> |
-          MW: <span class="mono" id="tMW">—</span> g/mol |
-          νO₂: <span class="mono" id="tNuO2">—</span> mol/mol |
-          λ: <span class="mono" id="tLambda">—</span> |
-          ṁf: <span class="mono" id="tMdotF">—</span> kg/s |
-          ṁa: <span class="mono" id="tMdotA">—</span> kg/s
+        <!-- ✅ NEW: Summary as horizontal bars -->
+        <div class="barBox">
+          <div class="barTitleRow">
+            <div class="barTitle">Computed summary (horizontal bars)</div>
+            <div class="small">scaled to typical ranges</div>
+          </div>
+
+          <div class="barRow">
+            <div class="barLbl">Formula</div>
+            <div class="barText mono" id="tFormula">—</div>
+            <div class="barVal mono"></div>
+          </div>
+
+          <div class="barRow">
+            <div class="barLbl">MW (g/mol)</div>
+            <div class="barTrack"><div class="barFill" id="hbMW"></div></div>
+            <div class="barVal mono" id="tMW">—</div>
+          </div>
+
+          <div class="barRow">
+            <div class="barLbl">νO₂ (mol/mol)</div>
+            <div class="barTrack"><div class="barFill" id="hbNuO2"></div></div>
+            <div class="barVal mono" id="tNuO2">—</div>
+          </div>
+
+          <div class="barRow">
+            <div class="barLbl">λ (—)</div>
+            <div class="barTrack"><div class="barFill" id="hbLambda"></div></div>
+            <div class="barVal mono" id="tLambda">—</div>
+          </div>
+
+          <div class="barRow">
+            <div class="barLbl">ṁf (kg/s)</div>
+            <div class="barTrack"><div class="barFill" id="hbMdotF"></div></div>
+            <div class="barVal mono" id="tMdotF">—</div>
+          </div>
+
+          <div class="barRow">
+            <div class="barLbl">ṁa (kg/s)</div>
+            <div class="barTrack"><div class="barFill" id="hbMdotA"></div></div>
+            <div class="barVal mono" id="tMdotA">—</div>
+          </div>
         </div>
 
         <div class="note">
@@ -489,6 +568,14 @@
     el.style.height = (p*100).toFixed(1) + "%";
   }
 
+  /* ✅ NEW: horizontal bar fill */
+  function setHBar(el, value, vmin, vmax){
+    if (!el) return;
+    if (!Number.isFinite(value)) { el.style.width = "0%"; return; }
+    const p = clamp01((value - vmin) / (vmax - vmin));
+    el.style.width = (p*100).toFixed(1) + "%";
+  }
+
   const elFuelSearch = document.getElementById("fuelSearch");
   const elFuelA = document.getElementById("fuelA");
   const elFuelB = document.getElementById("fuelB");
@@ -528,6 +615,13 @@
   const tLambda = document.getElementById("tLambda");
   const tMdotF = document.getElementById("tMdotF");
   const tMdotA = document.getElementById("tMdotA");
+
+  /* ✅ NEW: horizontal bar elements */
+  const hbMW = document.getElementById("hbMW");
+  const hbNuO2 = document.getElementById("hbNuO2");
+  const hbLambda = document.getElementById("hbLambda");
+  const hbMdotF = document.getElementById("hbMdotF");
+  const hbMdotA = document.getElementById("hbMdotA");
 
   function fuelKeys(){ return Object.keys(FUELS).sort(); }
   function getCategory(k){ return FUELS[k]?.cat || "User (local)"; }
@@ -748,7 +842,7 @@
         const qMW = parseFloat((elQthMW.value || "").trim());
         hasQ = Number.isFinite(qMW) && qMW > 0;
         if (hasQ) {
-          const Q_MJps = qMW;
+          const Q_MJps = qMW;     // MW = MJ/s
           mdot_f = Q_MJps / blend.LHV;
           mdot_a = afr_act * mdot_f;
         }
@@ -799,6 +893,19 @@
 
       tMdotF.textContent = (hasAFRact && hasQ) ? fmt(mdot_f, 6) : "—";
       tMdotA.textContent = (hasAFRact && hasQ) ? fmt(mdot_a, 6) : "—";
+
+      /* ✅ NEW: update horizontal bars (tune ranges anytime) */
+      setHBar(hbMW, mwf, 120, 200);         // g/mol typical jet surrogate
+      setHBar(hbNuO2, nuO2, 10, 25);        // mol/mol
+      setHBar(hbLambda, lambda, 0.5, 3.0);  // excess air factor
+
+      if (hasAFRact && hasQ){
+        setHBar(hbMdotF, mdot_f, 0.0, 1.0);   // kg/s (tune if needed)
+        setHBar(hbMdotA, mdot_a, 0.0, 25.0);  // kg/s
+      } else {
+        setHBar(hbMdotF, NaN, 0.0, 1.0);
+        setHBar(hbMdotA, NaN, 0.0, 25.0);
+      }
 
     } catch (e) {
       showWarn(warnBox, "Computation error: " + (e?.message || e));
