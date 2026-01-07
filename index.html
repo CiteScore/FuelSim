@@ -309,6 +309,26 @@
     .schemSvgV2 .headAir{ fill: rgba(170,190,255,.98); }
     .schemSvgV2 .headOut{ fill: rgba(92,214,164,.98); }
 
+
+    /* ===== Phase 2 (Lean-Premixed Screening) ===== */
+    .p2Wrap{ margin-top:16px; padding:14px; border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.03); }
+    .p2Head{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; }
+    .p2Title{ font-weight:800; letter-spacing:.2px; }
+    .p2Sub{ opacity:.85; font-size:13px; line-height:1.35; max-width:980px; }
+    .p2Grid{ display:grid; grid-template-columns: 1.1fr .9fr; gap:12px; margin-top:10px; }
+    @media (max-width: 980px){ .p2Grid{ grid-template-columns:1fr; } }
+    .p2Card{ border:1px solid var(--line); border-radius:12px; padding:12px; background:rgba(255,255,255,.02); }
+    .p2Row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+    .p2Row label{ font-size:13px; opacity:.9; }
+    .p2Json{ width:100%; min-height:190px; resize:vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:12px; line-height:1.35; padding:10px; border-radius:10px; border:1px solid var(--line); background:rgba(0,0,0,.25); color:inherit; }
+    .p2Table{ width:100%; border-collapse:collapse; font-size:13px; }
+    .p2Table th, .p2Table td{ border-bottom:1px solid rgba(255,255,255,.08); padding:8px 6px; text-align:left; vertical-align:top; }
+    .p2Table th{ font-size:12px; text-transform:uppercase; letter-spacing:.08em; opacity:.8; }
+    .badge{ display:inline-block; padding:3px 8px; border:1px solid rgba(255,255,255,.14); border-radius:999px; font-size:12px; opacity:.95; }
+    .pillWarn{ border-color: rgba(255, 206, 86, .5); background: rgba(255, 206, 86, .08); }
+    .pillOk{ border-color: rgba(75, 192, 192, .5); background: rgba(75, 192, 192, .08); }
+    .pillBad{ border-color: rgba(255, 99, 132, .5); background: rgba(255, 99, 132, .08); }
+
 </style>
 </head>
 
@@ -861,6 +881,78 @@
             </div>
             <div class="barTrack"><div class="barFill" id="hbMdotA"></div></div>
             <div class="barVal mono" id="tMdotA">—</div>
+          </div>
+        </div>
+
+        <!-- ===================== Phase 2: Aeroderivative Lean‑Premixed (Offline Batch) ===================== -->
+        <div class="p2Wrap" id="phase2">
+          <div class="p2Head">
+            <div>
+              <div class="p2Title">Phase 2 — Aeroderivative Lean‑Premixed Combustor Screening (Offline Batch)</div>
+              <div class="p2Sub">
+                Provide a batch of operating points (T3/P3/ϕ/τ<sub>res</sub>) as JSON. The page computes simple, transparent
+                screening metrics for the <b>current blend</b> (A/B mass%). Outputs are <b>trend indicators</b> only (not certification).
+              </div>
+            </div>
+            <div class="p2Row">
+              <label><input type="checkbox" id="p2UseLivePhi" checked> Use live ϕ from AFR slider (if enabled)</label>
+            </div>
+          </div>
+
+          <div class="p2Grid">
+            <div class="p2Card">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                <div><b>Batch cases (JSON)</b></div>
+                <div class="p2Row" style="margin-top:0">
+                  <button type="button" id="p2Load">Load cases</button>
+                  <span class="mono" id="p2Msg" style="font-size:12px; opacity:.85"></span>
+                </div>
+              </div>
+              <textarea class="p2Json" id="p2Json" spellcheck="false"></textarea>
+              <div class="p2Sub" style="margin-top:8px">
+                Expected schema: <span class="mono">{ "meta": {...}, "cases": [ { "name": "...", "T3_K": 740, "P3_bar": 18, "phi": 0.45, "res_time_ms": 3.0 } ] }</span>
+              </div>
+            </div>
+
+            <div class="p2Card">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                <div><b>Selected case</b></div>
+                <div class="p2Row" style="margin-top:0">
+                  <label>Case:</label>
+                  <select id="p2CaseSel"></select>
+                </div>
+              </div>
+
+              <div class="p2Row" style="margin-top:10px">
+                <span class="badge">T<sub>ad</sub>: <span class="mono" id="p2Tad">—</span> K</span>
+                <span class="badge">τ<sub>ign</sub>: <span class="mono" id="p2TauIgn">—</span> ms</span>
+                <span class="badge">NOx trend: <span class="mono" id="p2NOx">—</span></span>
+              </div>
+
+              <div class="p2Sub" style="margin-top:10px">
+                Heuristics used (screening): T<sub>ad</sub> scales with LHV and ϕ (lean burn reduces T). Ignition delay decreases with higher T3 and P3
+                and increases as mixture becomes leaner. NOx trend increases strongly with T<sub>ad</sub> and residence time.
+              </div>
+
+              <div style="margin-top:12px; overflow:auto;">
+                <table class="p2Table">
+                  <thead>
+                    <tr>
+                      <th>Case</th>
+                      <th>T3 (K)</th>
+                      <th>P3 (bar)</th>
+                      <th>ϕ</th>
+                      <th>τres (ms)</th>
+                      <th>τign (ms)</th>
+                      <th>Tad (K)</th>
+                      <th>NOx trend</th>
+                      <th>Flag</th>
+                    </tr>
+                  </thead>
+                  <tbody id="p2TableBody"></tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1501,6 +1593,15 @@ const elEditKey  = document.getElementById("editKey");
         // ignore schematic errors to avoid blocking calculations
       }
 
+      // Phase 2 refresh (batch screening)
+      try {
+        const livePhi = (elP2UseLivePhi && elP2UseLivePhi.checked && Number.isFinite(phi)) ? phi : NaN;
+        p2RenderTable(blend, livePhi);
+        p2UpdateSelected(blend, livePhi);
+      } catch (e3) {
+        // ignore Phase 2 errors
+      }
+
     } catch (e) {
       showWarn(warnBox, "Computation error: " + (e?.message || e));
     }
@@ -1524,6 +1625,153 @@ const elEditKey  = document.getElementById("editKey");
 
     update();
   }
+
+  // ===================== Phase 2: Offline batch case evaluator =====================
+  function escapeHTML(s){ return String(s).replace(/[&<>"\']/g, (c)=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","\'":"&#39;" }[c])); }
+
+  let P2_CASES = [];
+  const elP2Json = document.getElementById("p2Json");
+  const elP2Load = document.getElementById("p2Load");
+  const elP2Msg  = document.getElementById("p2Msg");
+  const elP2Sel  = document.getElementById("p2CaseSel");
+  const elP2Tad  = document.getElementById("p2Tad");
+  const elP2Tau  = document.getElementById("p2TauIgn");
+  const elP2NOx  = document.getElementById("p2NOx");
+  const elP2Tbl  = document.getElementById("p2TableBody");
+  const elP2UseLivePhi = document.getElementById("p2UseLivePhi");
+
+  function setP2Msg(txt){ if (elP2Msg) elP2Msg.textContent = txt || ""; }
+
+  function defaultP2Json(){
+    return JSON.stringify({
+      meta: { combustor: "Aeroderivative lean-premixed (screening)", units: {T3_K:"K", P3_bar:"bar", phi:"-", res_time_ms:"ms"} },
+      cases: [
+        { name:"Idle / low load",   T3_K: 650, P3_bar: 10, phi: 0.35, res_time_ms: 2.0 },
+        { name:"Cruise nominal",    T3_K: 730, P3_bar: 16, phi: 0.45, res_time_ms: 3.0 },
+        { name:"High power",        T3_K: 820, P3_bar: 22, phi: 0.55, res_time_ms: 4.0 },
+        { name:"Very lean stability",T3_K: 740, P3_bar: 18, phi: 0.30, res_time_ms: 3.5 }
+      ]
+    }, null, 2);
+  }
+
+  if (elP2Json && !elP2Json.value.trim()) elP2Json.value = defaultP2Json();
+
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+  // Simple, transparent screening surrogates (NOT validated correlations)
+  function p2Compute(caseObj, blend, livePhi){
+    const LHVn = (blend?.LHV || 43.0) / 43.0;     // normalize to Jet-A ~43 MJ/kg
+    const phi  = clamp(Number.isFinite(livePhi) ? livePhi : Number(caseObj.phi), 0.15, 1.20);
+    const T3   = clamp(Number(caseObj.T3_K), 450, 1100);
+    const P3   = clamp(Number(caseObj.P3_bar), 1, 40);
+    const tauR = clamp(Number(caseObj.res_time_ms), 0.5, 20);
+
+    // Adiabatic flame temperature trend: peaks near stoich, drops in lean.
+    // Keep within plausible aero combustor range.
+    const phiShape = (phi / (0.55 + phi)); // saturating
+    const Tad = clamp(550 + 1950 * phiShape * LHVn, 900, 2600);
+
+    // Ignition delay trend (ms): Arrhenius-like in T3, inverse with pressure, penalize very lean
+    const leanPenalty = Math.pow(0.55 / phi, 1.2);
+    const tauIgn = clamp(0.2 * Math.exp(9000 / T3) * Math.pow(P3/10, -0.75) * leanPenalty, 0.05, 200);
+
+    // NOx trend index: strongly increases with Tad and residence time (dimensionless, mapped to Low/Med/High)
+    const noxIndex = Math.pow((Tad - 1200) / 700, 2.0) * (tauR / 3.0);
+    let noxBand = "Low";
+    if (noxIndex > 1.8) noxBand = "High";
+    else if (noxIndex > 0.9) noxBand = "Medium";
+
+    // Simple flag (stability vs ignition)
+    let flag = { txt: "OK", cls: "pillOk" };
+    if (phi < 0.28 || tauIgn > tauR) flag = { txt:"Risk: ignition/stability", cls:"pillWarn" };
+    if (phi < 0.22 || tauIgn > 2*tauR) flag = { txt:"High risk", cls:"pillBad" };
+
+    return { phi, T3, P3, tauR, Tad, tauIgn, noxBand, flag };
+  }
+
+  function p2RenderTable(blend, livePhi){
+    if (!elP2Tbl) return;
+    elP2Tbl.innerHTML = "";
+    const rows = [];
+    P2_CASES.forEach((c, i) => {
+      const r = p2Compute(c, blend, livePhi);
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHTML(c.name || ("Case " + (i+1)))}</td>
+        <td class="mono">${r.T3.toFixed(0)}</td>
+        <td class="mono">${r.P3.toFixed(1)}</td>
+        <td class="mono">${r.phi.toFixed(2)}</td>
+        <td class="mono">${r.tauR.toFixed(2)}</td>
+        <td class="mono">${r.tauIgn.toFixed(2)}</td>
+        <td class="mono">${r.Tad.toFixed(0)}</td>
+        <td>${r.noxBand}</td>
+        <td><span class="badge ${r.flag.cls}">${r.flag.txt}</span></td>
+      `;
+      elP2Tbl.appendChild(tr);
+      rows.push(r);
+    });
+    return rows;
+  }
+
+  function p2PopulateSelect(){
+    if (!elP2Sel) return;
+    elP2Sel.innerHTML = "";
+    P2_CASES.forEach((c, i) => {
+      const opt = document.createElement("option");
+      opt.value = String(i);
+      opt.textContent = c.name ? c.name : ("Case " + (i+1));
+      elP2Sel.appendChild(opt);
+    });
+    if (P2_CASES.length) elP2Sel.value = "0";
+  }
+
+  function p2UpdateSelected(blend, livePhi){
+    if (!elP2Sel || !P2_CASES.length) {
+      if (elP2Tad) elP2Tad.textContent = "—";
+      if (elP2Tau) elP2Tau.textContent = "—";
+      if (elP2NOx) elP2NOx.textContent = "—";
+      return;
+    }
+    const idx = clamp(parseInt(elP2Sel.value || "0", 10), 0, P2_CASES.length-1);
+    const r = p2Compute(P2_CASES[idx], blend, livePhi);
+    if (elP2Tad) elP2Tad.textContent = r.Tad.toFixed(0);
+    if (elP2Tau) elP2Tau.textContent = r.tauIgn.toFixed(2);
+    if (elP2NOx) elP2NOx.textContent = r.noxBand;
+  }
+
+  function p2ParseAndLoad(){
+    try {
+      const obj = JSON.parse(elP2Json.value || "{}");
+      const cases = Array.isArray(obj.cases) ? obj.cases : [];
+      if (!cases.length) throw new Error("No cases[] found.");
+      // sanitize
+      P2_CASES = cases.map(c => ({
+        name: String(c.name || "").slice(0, 60) || undefined,
+        T3_K: Number(c.T3_K),
+        P3_bar: Number(c.P3_bar),
+        phi: Number(c.phi),
+        res_time_ms: Number(c.res_time_ms)
+      }));
+      p2PopulateSelect();
+      setP2Msg(`Loaded ${P2_CASES.length} case(s).`);
+      // refresh with current blend once update() runs, but try now too:
+      try { update(); } catch(e) {}
+    } catch (e) {
+      setP2Msg("JSON error: " + (e?.message || e));
+      P2_CASES = [];
+      p2PopulateSelect();
+      p2UpdateSelected(null, NaN);
+      if (elP2Tbl) elP2Tbl.innerHTML = "";
+    }
+  }
+
+  if (elP2Load) elP2Load.addEventListener("click", p2ParseAndLoad);
+  if (elP2Sel)  elP2Sel.addEventListener("change", () => { try{ update(); } catch(e){} });
+  if (elP2UseLivePhi) elP2UseLivePhi.addEventListener("change", () => { try{ update(); } catch(e){} });
+
+  // Load defaults on first run
+  try { p2ParseAndLoad(); } catch(e) {}
+
   initDropdowns();
 </script>
 </body>
