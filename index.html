@@ -1,9 +1,10 @@
+
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Fuel Blend Calculator (Mass %)</title>
+  <title>Fuel Blending Lab (Mass %)</title>
   <style>
     :root{
       --bg:#0b1220; --card:#121a2b; --card2:#0f1726; --text:#e7eefc; --muted:#a7b4d1;
@@ -17,91 +18,109 @@
     .subtitle{margin:6px 0 0;color:var(--muted);font-size:13px;line-height:1.4}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
     @media (max-width:900px){ .grid{grid-template-columns:1fr} }
-
     .card{background:rgba(18,26,43,.92);border:1px solid var(--line);border-radius:14px;padding:16px}
     .card h3{margin:0 0 10px;font-size:14px;letter-spacing:.2px;color:#d8e4ff}
-
-    /* ===== Responsive input layout upgrades ===== */
-    .row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-    @media (max-width:720px){ .row{grid-template-columns:1fr} }
-
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:520px){ .row{grid-template-columns:1fr} }
     label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
-
-    /* Prevent overflow in grid children */
-    .row > div{min-width:0}
-
     select,input[type="text"],input[type="number"]{
-      width:100%;
-      max-width:100%;
-      padding:10px 12px;
-      border-radius:10px;
-      border:1px solid var(--line);
-      background:var(--card2);
-      color:var(--text);
-      outline:none;
-      min-width:0;
+      width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);
+      background:var(--card2);color:var(--text);outline:none
     }
-
-    input[type="range"]{width:100%;min-width:0}
-
-    /* Slider line: stack on small screens */
-    .sliderline{
-      display:grid;
-      grid-template-columns:110px 1fr 110px;
-      gap:10px;
-      align-items:center;
-    }
-    @media (max-width:520px){
-      .sliderline{
-        grid-template-columns:1fr;
-        gap:8px;
-      }
-      .pill{width:100%;text-align:center}
-    }
-
+    input[type="range"]{width:100%}
+    .sliderline{display:flex;align-items:center;gap:10px}
     .pill{
-      padding:6px 10px;
-      border:1px solid var(--line);
-      border-radius:999px;
-      background:rgba(255,255,255,.04);
-      font-size:12px;
-      color:var(--text);
-      min-width:0;
+      padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.04);
+      font-size:12px;color:var(--text);min-width:110px;text-align:center
     }
-
-    /* Make range boxes fit nicely */
-    .rangeBox{
-      border:1px solid var(--line);
-      border-radius:12px;
-      background:rgba(255,255,255,.02);
-      padding:10px 10px 8px;
-      min-width:0;
-    }
-    .rangeHead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px;flex-wrap:wrap}
-    .rangeVal{
-      padding:4px 8px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.04);
-      font-size:12px;color:var(--text);white-space:nowrap
-    }
-    .rangeSub{display:flex;justify-content:space-between;margin-top:6px;color:var(--muted);font-size:11px}
-    .rangeBtns{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
-    .rangeBtns button{padding:7px 10px;font-size:12px}
-
     .note{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.45}
     .warn{
       margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,204,102,.35);
       background:rgba(255,204,102,.08);color:var(--warn);font-size:12px;line-height:1.45;display:none
     }
-
+    .footer{margin-top:14px;color:var(--muted);font-size:11px}
     .small{font-size:11px;color:var(--muted)}
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
-
     button{
       padding:10px 12px;border-radius:10px;border:1px solid var(--line);
       background:rgba(255,255,255,.06);color:var(--text);cursor:pointer
     }
     button.primary{background:rgba(98,168,255,.18)}
 
-    /* Output side styles kept minimal here */
+    /* ===== Range control ===== */
+    .rangeBox{
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:rgba(255,255,255,.02);
+      padding:10px 10px 8px;
+    }
+    .rangeHead{
+      display:flex; justify-content:space-between; align-items:baseline; gap:10px;
+      margin-bottom:6px;
+    }
+    .rangeVal{
+      padding:4px 8px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.04);
+      font-size:12px;color:var(--text);
+      white-space:nowrap;
+    }
+    .rangeSub{
+      display:flex; justify-content:space-between; margin-top:6px; color:var(--muted); font-size:11px;
+    }
+    .rangeBtns{
+      display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;
+    }
+    .rangeBtns button{
+      padding:7px 10px; font-size:12px;
+    }
+
+    /* ===== Circular dials (SVG gauges) ===== */
+    .dialGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    @media (max-width:520px){ .dialGrid{grid-template-columns:1fr} }
+    .dialCard{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.03);padding:12px}
+    .dialTop{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+    .dialTitle{font-size:12px;color:var(--muted)}
+    .dialValue{font-size:14px;font-weight:700}
+    .dialUnit{font-size:11px;color:var(--muted);margin-left:6px}
+    .dialWrap{display:flex;justify-content:center;align-items:center;margin-top:8px}
+    .dialSvg{width:180px;height:110px}
+    .dialTrack{stroke:rgba(255,255,255,.10);stroke-width:10;fill:none;stroke-linecap:round}
+    .dialProg{
+      stroke:rgba(98,168,255,.95);stroke-width:10;fill:none;stroke-linecap:round;
+      stroke-dasharray: 0 9999; transition:stroke-dasharray .25s ease;
+    }
+    .dialMinMax{display:flex;justify-content:space-between;margin-top:6px;color:var(--muted);font-size:11px}
+
+    /* ===== Column bars (vertical) ===== */
+    .colChart{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.03);padding:12px}
+    .colTop{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+    .colTitle{font-size:12px;color:var(--muted)}
+    .colValue{font-size:14px;font-weight:700}
+    .cols{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0,1fr));
+      gap:10px;
+      margin-top:10px;
+      align-items:end;
+    }
+    @media (max-width: 900px){ .cols{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
+    @media (max-width: 520px){ .cols{ grid-template-columns:1fr; } }
+    .cols > div{ min-width:0; }
+    .col{
+      position:relative;
+      height:120px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:rgba(255,255,255,.04);
+      overflow:hidden
+    }
+    .colFill{
+      position:absolute;left:0;right:0;bottom:0;height:0%;
+      background:linear-gradient(180deg,rgba(255,204,102,.85),rgba(255,204,102,.20));
+      transition:height .25s ease;
+    }
+    .colLbl{margin-top:6px;font-size:11px;color:var(--muted);text-align:center}
+
+    /* ===== Horizontal bars for summary ===== */
     .barBox{
       border:1px solid var(--line);
       border-radius:14px;
@@ -109,7 +128,88 @@
       padding:12px;
       margin-top:12px;
     }
-    .barTitleRow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+    .barTitleRow{
+      display:flex;
+      justify-content:space-between;
+      align-items:baseline;
+      gap:10px;
+      margin-bottom:8px;
+    }
+    .barTitle{font-size:12px;color:var(--muted)}
+    .barRow{
+      display:grid;
+      grid-template-columns: 160px 1fr 110px;
+      gap:10px;
+      align-items:center;
+      padding:6px 0;
+    }
+    @media (max-width:520px){
+      .barRow{ grid-template-columns: 1fr; }
+      .barVal{ text-align:left; }
+    }
+    .barLbl{font-size:12px;color:var(--muted)}
+    .barText{font-size:12px;color:var(--text);opacity:.95}
+    .barTrack{
+      height:10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.04);
+      overflow:hidden;
+    }
+    .barFill{
+      height:100%;
+      width:0%;
+      background:linear-gradient(90deg, rgba(98,168,255,.95), rgba(255,204,102,.70));
+      transition:width .25s ease;
+    }
+    .barVal{font-size:12px;text-align:right}
+
+    /* ===== Tooltip (NEW) ===== */
+    .tt{
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: help;
+      user-select: none;
+    }
+    .tt .infoDot{
+      width:16px;height:16px; border-radius:999px;
+      display:inline-flex; align-items:center; justify-content:center;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.05);
+      color:var(--muted);
+      font-size:11px;
+      line-height:1;
+      flex:0 0 auto;
+    }
+    .tt .tip{
+      position:absolute;
+      left:0;
+      top: calc(100% + 8px);
+      width: min(360px, 80vw);
+      z-index: 50;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:rgba(10,16,30,.96);
+      color:var(--text);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      display:none;
+    }
+    .tt:hover .tip, .tt:focus-within .tip{ display:block; }
+    .tip .tTitle{ font-size:12px; font-weight:700; margin:0 0 6px; color:#d8e4ff;}
+    .tip .tDef{ font-size:12px; margin:0 0 6px; color:var(--muted); line-height:1.35;}
+    .tip .tEq{
+      font-size:12px;
+      margin:0;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.04);
+      overflow:auto;
+    }
+    .tip code{ font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; }
   </style>
 </head>
 
@@ -117,10 +217,15 @@
   <div class="wrap">
     <div class="topbar">
       <div>
-        <p class="title">Fuel Blend Calculator</p>
-        <p class="subtitle">Two-component blending by <b>mass %</b>. Responsive inputs layout.</p>
+        <p class="title">Fuel Blending Lab</p>
+        <p class="subtitle">
+          Two-component blending by <b>mass %</b>. Visual outputs: surrogate formula, stoichiometry, and sizing metrics.
+        </p>
       </div>
-      <div class="small">Basis: <b>mass%</b> (A + B = 100)</div>
+      <div class="small">
+        Basis: <b>mass%</b> (A + B = 100)
+        <div class="footer">Screening tool: transparent assumptions, trend-focused.</div>
+      </div>
     </div>
 
     <div class="grid">
@@ -129,7 +234,7 @@
         <h3>Inputs</h3>
 
         <label for="fuelSearch">Search fuels (key or name)</label>
-        <input id="fuelSearch" type="text" placeholder="Type to filter dropdowns..." />
+        <input id="fuelSearch" type="text" placeholder="Type to filter dropdowns (e.g., HEFA, aromatic, ethanol, methane...)" />
 
         <div class="row" style="margin-top:8px">
           <div>
@@ -152,6 +257,7 @@
         <label for="blendName">Optional blend name</label>
         <input id="blendName" type="text" placeholder="Leave blank for auto-name" />
 
+        <!-- Operating inputs -->
         <div style="margin-top:14px; padding:12px; border:1px solid var(--line); border-radius:12px; background:rgba(255,255,255,.03)">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
             <div style="font-weight:700; font-size:12px; color:#d8e4ff">Operating inputs (optional)</div>
@@ -168,6 +274,10 @@
                 </div>
                 <input id="afrActRange" type="range" min="5" max="35" step="0.1" value="18.0" />
                 <div class="rangeSub"><span>5</span><span>35</span></div>
+                <div class="rangeBtns">
+                  <button type="button" id="afrClear">Clear</button>
+                  <button type="button" id="afrStoich">Set = AFRst</button>
+                </div>
               </div>
             </div>
 
@@ -180,58 +290,933 @@
                 </div>
                 <input id="qthMWRange" type="range" min="0" max="50" step="0.5" value="10.0" />
                 <div class="rangeSub"><span>0</span><span>50</span></div>
+                <div class="rangeBtns">
+                  <button type="button" id="qClear">Clear</button>
+                  <button type="button" id="q10">10 MW</button>
+                  <button type="button" id="q50">50 MW</button>
+                </div>
               </div>
             </div>
           </div>
 
           <div class="note">
-            On small screens, inputs stack; slider pills also stack.
+            AFR slider controls φ and λ. If Q̇ &gt; 0, the tool computes ṁf and ṁa.
+            Use <b>Clear</b> to disable a slider’s effect.
           </div>
         </div>
 
+        <div class="note">
+          <b>Reference density field:</b> uses each fuel’s stated reference density (often 15°C for liquids; cryogenic for LCH₄).<br/>
+          Mixing uses specific-volume rule (engineering approximation).
+        </div>
+
         <div class="warn" id="warnBox"></div>
+
+        <!-- Edit/Add Fuel -->
+        <div style="margin-top:14px; padding:12px; border:1px solid var(--line); border-radius:12px; background:rgba(255,255,255,.03)">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
+            <div style="font-weight:700; font-size:12px; color:#d8e4ff">Edit / Add Fuel</div>
+            <div class="small">Saved locally in this browser</div>
+          </div>
+
+          <div class="row" style="margin-top:10px">
+            <div>
+              <label for="editKey">Fuel key to edit</label>
+              <select id="editKey"></select>
+            </div>
+            <div>
+              <label for="editName">Fuel name</label>
+              <input id="editName" type="text" placeholder="Display name" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div><label for="editXC">xC</label><input id="editXC" type="text" placeholder="e.g., 12" /></div>
+            <div><label for="editYH">yH</label><input id="editYH" type="text" placeholder="e.g., 26" /></div>
+          </div>
+
+          <div class="row">
+            <div><label for="editZO">zO</label><input id="editZO" type="text" placeholder="e.g., 0" /></div>
+            <div><label for="editRho">Density ρ (kg/m³)</label><input id="editRho" type="text" placeholder="e.g., 780" /></div>
+          </div>
+
+          <div class="row">
+            <div><label for="editLHV">LHV (MJ/kg)</label><input id="editLHV" type="text" placeholder="e.g., 43.3" /></div>
+            <div style="display:flex; align-items:end; gap:10px">
+              <button id="btnSaveFuel" class="primary" style="width:100%">Save fuel</button>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:8px">
+            <button id="btnNewFuel" type="button">Add new fuel key</button>
+            <button id="btnResetLocal" type="button">Reset local edits</button>
+          </div>
+
+          <div id="editMsg" class="note" style="margin-top:10px"></div>
+        </div>
       </div>
 
-      <!-- Outputs (placeholder) -->
+      <!-- Outputs -->
       <div class="card">
-        <h3>Outputs</h3>
+        <h3>Fuel blend properties </h3>
+
+        <div class="dialGrid">
+          <div class="dialCard">
+            <div class="dialTop">
+              <div class="dialTitle">
+                <span class="tt" tabindex="0">
+                  LHV
+                  <span class="infoDot">i</span>
+                  <span class="tip">
+                    <p class="tTitle">LHV (Lower Heating Value)</p>
+                    <p class="tDef">Energy released per unit mass of fuel, excluding latent heat of water condensation.</p>
+                    <p class="tEq"><code>LHV_blend = wA·LHV_A + wB·LHV_B</code></p>
+                  </span>
+                </span>
+              </div>
+              <div class="dialValue"><span class="mono" id="gLHV">—</span><span class="dialUnit">MJ/kg</span></div>
+            </div>
+            <div class="dialWrap">
+              <svg class="dialSvg" viewBox="0 0 200 120">
+                <path class="dialTrack" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+                <path class="dialProg" id="dLHV" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+              </svg>
+            </div>
+            <div class="dialMinMax"><span>20</span><span>50</span></div>
+          </div>
+
+          <div class="dialCard">
+            <div class="dialTop">
+              <div class="dialTitle">
+                <span class="tt" tabindex="0">
+                  Density
+                  <span class="infoDot">i</span>
+                  <span class="tip">
+                    <p class="tTitle">Density (ρ)</p>
+                    <p class="tDef">Mass per unit volume at the stated reference condition.</p>
+                    <p class="tEq"><code>1/ρ_blend = wA/ρ_A + wB/ρ_B</code></p>
+                  </span>
+                </span>
+              </div>
+              <div class="dialValue"><span class="mono" id="gRho">—</span><span class="dialUnit">kg/m³</span></div>
+            </div>
+            <div class="dialWrap">
+              <svg class="dialSvg" viewBox="0 0 200 120">
+                <path class="dialTrack" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+                <path class="dialProg" id="dRho" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+              </svg>
+            </div>
+            <div class="dialMinMax"><span>650</span><span>900</span></div>
+          </div>
+
+          <div class="dialCard">
+            <div class="dialTop">
+              <div class="dialTitle">
+                <span class="tt" tabindex="0">
+                  AFRst
+                  <span class="infoDot">i</span>
+                  <span class="tip">
+                    <p class="tTitle">Stoichiometric AFR (AFRst)</p>
+                    <p class="tDef">Air–fuel ratio required for complete combustion (no excess O₂, no CO).</p>
+                    <p class="tEq"><code>νO2 = x + y/4 − z/2; AFRst = (νO2·MW_O2)/(MW_fuel·Y_O2)</code></p>
+                  </span>
+                </span>
+              </div>
+              <div class="dialValue"><span class="mono" id="gAFRst">—</span><span class="dialUnit">kg/kg</span></div>
+            </div>
+            <div class="dialWrap">
+              <svg class="dialSvg" viewBox="0 0 200 120">
+                <path class="dialTrack" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+                <path class="dialProg" id="dAFR" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+              </svg>
+            </div>
+            <div class="dialMinMax"><span>5</span><span>25</span></div>
+          </div>
+
+          <div class="dialCard">
+            <div class="dialTop">
+              <div class="dialTitle">
+                <span class="tt" tabindex="0">
+                  ϕ (needs AFRact)
+                  <span class="infoDot">i</span>
+                  <span class="tip">
+                    <p class="tTitle">Equivalence ratio (ϕ)</p>
+                    <p class="tDef">Measure of richness: ϕ&gt;1 rich, ϕ&lt;1 lean.</p>
+                    <p class="tEq"><code>ϕ = AFRst / AFRact</code></p>
+                  </span>
+                </span>
+              </div>
+              <div class="dialValue"><span class="mono" id="gPhi">—</span><span class="dialUnit">—</span></div>
+            </div>
+            <div class="dialWrap">
+              <svg class="dialSvg" viewBox="0 0 200 120">
+                <path class="dialTrack" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+                <path class="dialProg" id="dPhi" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+              </svg>
+            </div>
+            <div class="dialMinMax"><span>0.2</span><span>2.0</span></div>
+          </div>
+
+          <div class="dialCard">
+            <div class="dialTop">
+              <div class="dialTitle">
+                <span class="tt" tabindex="0">
+                  CO₂ per energy
+                  <span class="infoDot">i</span>
+                  <span class="tip">
+                    <p class="tTitle">CO₂ per thermal energy</p>
+                    <p class="tDef">Combustion CO₂ per delivered thermal energy (LHV basis).</p>
+                    <p class="tEq"><code>CO2_g/kWh = (CO2_kg/kg / LHV_MJ/kg) · 3.6 · 1000</code></p>
+                  </span>
+                </span>
+              </div>
+              <div class="dialValue"><span class="mono" id="gCO2kWh">—</span><span class="dialUnit">g/kWhₜₕ</span></div>
+            </div>
+            <div class="dialWrap">
+              <svg class="dialSvg" viewBox="0 0 200 120">
+                <path class="dialTrack" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+                <path class="dialProg" id="dCO2kWh" d="M 20 100 A 80 80 0 0 1 180 100"></path>
+              </svg>
+            </div>
+            <div class="dialMinMax"><span>150</span><span>350</span></div>
+          </div>
+        </div>
+
+        <div class="colChart" style="margin-top:12px">
+          <div class="colTop">
+            <div class="colTitle">Key outputs </div>
+            <div class="colValue"><span class="small">scaled to typical ranges</span></div>
+          </div>
+
+          <div class="cols">
+            <div>
+              <div class="col"><div class="colFill" id="cLHVvol"></div></div>
+              <div class="colLbl">
+                <span class="tt" tabindex="0">
+                  LHV MJ/L
+                  <span class="infoDot">i</span>
+                  <span class="tip">
+                    <p class="tTitle">Volumetric LHV</p>
+                    <p class="tDef">Energy per unit volume; useful for tank sizing and volume flow comparisons.</p>
+                    <p class="tEq"><code>LHV_vol = LHV·ρ/1000</code></p>
+                  </span>
+                </span>
+              </div>
+              <div class="small" style="text-align:center"><span class="mono" id="bLHVvol">—</span></div>
+            </div>
+
+            <div>
+              <div class="col"><div class="colFill" id="cCO2"></div></div>
+              <div class="colLbl">
+                <span class="tt" tabindex="0">
+                  CO₂ kg/kg
+                  <span class="infoDot">i</span>
+                  <span class="tip">
+                    <p class="tTitle">CO₂ intensity (per kg fuel)</p>
+                    <p class="tDef">Complete-combustion CO₂ produced per kg of fuel.</p>
+                    <p class="tEq"><code>CO2_kg/kg = x·MW_CO2 / MW_fuel</code></p>
+                  </span>
+                </span>
+              </div>
+              <div class="small" style="text-align:center"><span class="mono" id="bCO2kgkg">—</span></div>
+            </div>
+
+            <div>
+              <div class="col"><div class="colFill" id="cH2O"></div></div>
+              <div class="colLbl">
+                <span class="tt" tabindex="0">
+                  H₂O kg/kg
+                  <span class="infoDot">i</span>
+                  <span class="tip">
+                    <p class="tTitle">H₂O intensity (per kg fuel)</p>
+                    <p class="tDef">Water formed from hydrogen under complete combustion.</p>
+                    <p class="tEq"><code>H2O_kg/kg = (y/2)·MW_H2O / MW_fuel</code></p>
+                  </span>
+                </span>
+              </div>
+              <div class="small" style="text-align:center"><span class="mono" id="bH2Okgkg">—</span></div>
+            </div>
+
+            <div>
+              <div class="col"><div class="colFill" id="cQair"></div></div>
+              <div class="colLbl">
+                <span class="tt" tabindex="0">
+                  q_air MJ/kg air
+                  <span class="infoDot">i</span>
+                  <span class="tip">
+                    <p class="tTitle">Heat per kg air (screening)</p>
+                    <p class="tDef">Thermal energy released per kg of air at the selected AFRact.</p>
+                    <p class="tEq"><code>q_air = LHV / AFRact</code></p>
+                  </span>
+                </span>
+              </div>
+              <div class="small" style="text-align:center"><span class="mono" id="bQair">—</span></div>
+            </div>
+          </div>
+        </div>
+
         <div class="barBox">
-          Your outputs section stays as-is. Paste your existing outputs HTML here (unchanged).
+          <div class="barTitleRow">
+            <div class="barTitle">Computed summary (horizontal bars)</div>
+            <div class="small">scaled to typical ranges</div>
+          </div>
+
+          <div class="barRow">
+            <div class="barLbl">
+              <span class="tt" tabindex="0">
+                Formula
+                <span class="infoDot">i</span>
+                <span class="tip">
+                  <p class="tTitle">Surrogate formula</p>
+                  <p class="tDef">Blend surrogate computed by mass-weighted averaging of x,y,z.</p>
+                  <p class="tEq"><code>x = wA·xA + wB·xB (same for y,z)</code></p>
+                </span>
+              </span>
+            </div>
+            <div class="barText mono" id="tFormula">—</div>
+            <div class="barVal mono"></div>
+          </div>
+
+          <div class="barRow">
+            <div class="barLbl">
+              <span class="tt" tabindex="0">
+                MW (g/mol)
+                <span class="infoDot">i</span>
+                <span class="tip">
+                  <p class="tTitle">Molecular weight of surrogate fuel</p>
+                  <p class="tDef">Computed from the surrogate formula CxHyOz.</p>
+                  <p class="tEq"><code>MW_fuel = x·MW_C + y·MW_H + z·MW_O</code></p>
+                </span>
+              </span>
+            </div>
+            <div class="barTrack"><div class="barFill" id="hbMW"></div></div>
+            <div class="barVal mono" id="tMW">—</div>
+          </div>
+
+          <div class="barRow">
+            <div class="barLbl">
+              <span class="tt" tabindex="0">
+                νO₂ (mol/mol)
+                <span class="infoDot">i</span>
+                <span class="tip">
+                  <p class="tTitle">Stoichiometric O₂ requirement</p>
+                  <p class="tDef">Moles of O₂ needed per mole fuel for complete combustion.</p>
+                  <p class="tEq"><code>νO2 = x + y/4 − z/2</code></p>
+                </span>
+              </span>
+            </div>
+            <div class="barTrack"><div class="barFill" id="hbNuO2"></div></div>
+            <div class="barVal mono" id="tNuO2">—</div>
+          </div>
+
+          <div class="barRow">
+            <div class="barLbl">
+              <span class="tt" tabindex="0">
+                λ (—)
+                <span class="infoDot">i</span>
+                <span class="tip">
+                  <p class="tTitle">Excess-air ratio (λ)</p>
+                  <p class="tDef">λ&gt;1 lean (excess air), λ&lt;1 rich.</p>
+                  <p class="tEq"><code>λ = AFRact / AFRst = 1/ϕ</code></p>
+                </span>
+              </span>
+            </div>
+            <div class="barTrack"><div class="barFill" id="hbLambda"></div></div>
+            <div class="barVal mono" id="tLambda">—</div>
+          </div>
+
+          <div class="barRow">
+            <div class="barLbl">
+              <span class="tt" tabindex="0">
+                ṁf (kg/s)
+                <span class="infoDot">i</span>
+                <span class="tip">
+                  <p class="tTitle">Fuel mass flow rate</p>
+                  <p class="tDef">Fuel needed to deliver target thermal power Q̇ (LHV basis).</p>
+                  <p class="tEq"><code>ṁf = Q̇(MJ/s) / LHV(MJ/kg)</code></p>
+                </span>
+              </span>
+            </div>
+            <div class="barTrack"><div class="barFill" id="hbMdotF"></div></div>
+            <div class="barVal mono" id="tMdotF">—</div>
+          </div>
+
+          <div class="barRow">
+            <div class="barLbl">
+              <span class="tt" tabindex="0">
+                ṁa (kg/s)
+                <span class="infoDot">i</span>
+                <span class="tip">
+                  <p class="tTitle">Air mass flow rate</p>
+                  <p class="tDef">Air required at the selected AFRact.</p>
+                  <p class="tEq"><code>ṁa = AFRact · ṁf</code></p>
+                </span>
+              </span>
+            </div>
+            <div class="barTrack"><div class="barFill" id="hbMdotA"></div></div>
+            <div class="barVal mono" id="tMdotA">—</div>
+          </div>
+        </div>
+
+        <div class="note">
+          Definitions (screening): νO₂ = x + y/4 − z/2; AFRst uses Y<sub>O2</sub>=0.232 (mass fraction).<br/>
+          CO₂/kg fuel = x·MW(CO₂)/MW(fuel); H₂O/kg fuel = (y/2)·MW(H₂O)/MW(fuel).<br/>
+          ϕ = AFRst/AFRact, λ = 1/ϕ, q<sub>air</sub>=LHV/AFRact. Q̇ in MW equals MJ/s.
         </div>
       </div>
     </div>
+
+    <div class="footer">
+      <span class="mono">Note:</span> This tool is intended for engineering screening and relative trends. It does not replace certification testing.
+    </div>
   </div>
 
-  <script>
-    // Keep your existing JS (unchanged). This file only fixes responsive input layout CSS.
-    // If you want, paste your full JS back below.
-    const fuelA = document.getElementById("fuelA");
-    const fuelB = document.getElementById("fuelB");
-    const editKey = document.getElementById("editKey");
-    const fuelSearch = document.getElementById("fuelSearch");
+<script>
+  const Y_O2_AIR = 0.232;
+  const MW = { C: 12.011, H: 1.008, O: 15.999, O2: 31.998, CO2: 44.0095, H2O: 18.01528 };
 
-    // Minimal demo population so dropdowns show something immediately
-    const FUELS = {
-      JetA:{name:"Jet-A"},
-      HEFA:{name:"HEFA-SPK"},
-      LCH4:{name:"Liquid methane"}
-    };
+  const CAT_ORDER = [
+    "Conventional Jet",
+    "SAF (Paraffinic)",
+    "SAF (Cyclo/Aromatic)",
+    "Oxygenated e-fuels (screening)",
+    "Pure-component references",
+    "Oxygenates (validation)",
+    "Diesel/Gasoline (screening)",
+    "Gases (stoichiometry checks)",
+    "User (local)"
+  ];
 
-    function refillSelects(filter=""){
-      const keys = Object.keys(FUELS).filter(k=>{
-        const n = (FUELS[k].name||"").toLowerCase();
-        const q = (filter||"").toLowerCase();
-        return !q || k.toLowerCase().includes(q) || n.includes(q);
-      });
-      const opts = keys.map(k=>`<option value="${k}">${k} — ${FUELS[k].name}</option>`).join("");
-      fuelA.innerHTML = opts;
-      fuelB.innerHTML = opts;
-      if (keys[0]) fuelA.value = keys[0];
-      if (keys[1]) fuelB.value = keys[1];
+  const DEFAULT_FUELS = {
+    JetA:        { cat:"Conventional Jet", name:"Jet-A (rep)",                  xC:11.40, yH:22.10, zO:0.00, rho:803.0, LHV:43.06 },
+    JetA_light:  { cat:"Conventional Jet", name:"Jet-A (lighter cut)",          xC:10.80, yH:21.60, zO:0.00, rho:790.0, LHV:43.20 },
+    JetA_heavy:  { cat:"Conventional Jet", name:"Jet-A (heavier cut)",          xC:12.20, yH:23.20, zO:0.00, rho:820.0, LHV:42.90 },
+    JetA_hiAro:  { cat:"Conventional Jet", name:"Jet fuel (higher aromatics)",  xC:10.80, yH:17.50, zO:0.00, rho:840.0, LHV:42.00 },
+    JetA_loAro:  { cat:"Conventional Jet", name:"Jet fuel (low aromatics)",     xC:11.80, yH:25.50, zO:0.00, rho:770.0, LHV:43.90 },
+
+    HEFA:        { cat:"SAF (Paraffinic)", name:"HEFA-SPK (rep)",               xC:11.60, yH:25.20, zO:0.00, rho:752.0, LHV:44.18 },
+    FT:          { cat:"SAF (Paraffinic)", name:"FT-SPK (rep)",                 xC:12.00, yH:26.00, zO:0.00, rho:760.0, LHV:43.50 },
+    ATJ:         { cat:"SAF (Paraffinic)", name:"ATJ-SPK (rep)",                xC:11.30, yH:24.80, zO:0.00, rho:760.0, LHV:43.80 },
+    SIP:         { cat:"SAF (Paraffinic)", name:"SIP (iso-paraffinic)",         xC:11.00, yH:24.00, zO:0.00, rho:750.0, LHV:44.00 },
+    HFS_SPK:     { cat:"SAF (Paraffinic)", name:"HFS (hydroprocessed sugars)",  xC:11.20, yH:24.40, zO:0.00, rho:748.0, LHV:44.10 },
+
+    CHJ:         { cat:"SAF (Cyclo/Aromatic)", name:"CHJ (cycloalkane rich)",        xC:10.80, yH:19.50, zO:0.00, rho:815.0, LHV:42.60 },
+    FT_SKA:      { cat:"SAF (Cyclo/Aromatic)", name:"FT-SKA (aromatics-containing)", xC:10.50, yH:16.50, zO:0.00, rho:850.0, LHV:41.80 },
+    ARO_05:      { cat:"SAF (Cyclo/Aromatic)", name:"Aromatics surrogate (~5%)",     xC:11.20, yH:21.00, zO:0.00, rho:815.0, LHV:42.90 },
+    ARO_10:      { cat:"SAF (Cyclo/Aromatic)", name:"Aromatics surrogate (~10%)",    xC:10.80, yH:19.00, zO:0.00, rho:840.0, LHV:42.20 },
+    ARO_20:      { cat:"SAF (Cyclo/Aromatic)", name:"Aromatics surrogate (~20%)",    xC:10.20, yH:16.00, zO:0.00, rho:870.0, LHV:41.20 },
+
+    eKero_O0:    { cat:"Oxygenated e-fuels (screening)", name:"e-Kerosene (no oxygen)",      xC:12.00, yH:26.00, zO:0.00, rho:775.0, LHV:43.80 },
+    eKero_O1:    { cat:"Oxygenated e-fuels (screening)", name:"Oxygenated e-kerosene (O~1)", xC:12.00, yH:24.00, zO:1.00, rho:820.0, LHV:41.80 },
+    eKero_O2:    { cat:"Oxygenated e-fuels (screening)", name:"Oxygenated e-kerosene (O~2)", xC:12.00, yH:24.00, zO:2.00, rho:840.0, LHV:40.50 },
+    eKero_O3:    { cat:"Oxygenated e-fuels (screening)", name:"Oxygenated e-kerosene (O~3)", xC:12.00, yH:24.00, zO:3.00, rho:860.0, LHV:39.20 },
+
+    nDecane:      { cat:"Pure-component references", name:"n-Decane (C10H22)",         xC:10.00, yH:22.00, zO:0.00, rho:730.0, LHV:44.60 },
+    nDodecane:    { cat:"Pure-component references", name:"n-Dodecane (C12H26)",       xC:12.00, yH:26.00, zO:0.00, rho:748.0, LHV:44.00 },
+    nTetradecane: { cat:"Pure-component references", name:"n-Tetradecane (C14H30)",    xC:14.00, yH:30.00, zO:0.00, rho:763.0, LHV:43.20 },
+    isoOctane:    { cat:"Pure-component references", name:"Iso-octane (C8H18)",        xC: 8.00, yH:18.00, zO:0.00, rho:692.0, LHV:44.30 },
+    Toluene:      { cat:"Pure-component references", name:"Toluene (C7H8)",            xC: 7.00, yH: 8.00, zO:0.00, rho:867.0, LHV:40.60 },
+    Xylene:       { cat:"Pure-component references", name:"Xylene (C8H10)",            xC: 8.00, yH:10.00, zO:0.00, rho:860.0, LHV:40.00 },
+    Cyclohexane:  { cat:"Pure-component references", name:"Cyclohexane (C6H12)",       xC: 6.00, yH:12.00, zO:0.00, rho:779.0, LHV:43.30 },
+
+    MeOH:         { cat:"Oxygenates (validation)", name:"Methanol (CH4O)",             xC: 1.00, yH: 4.00, zO:1.00, rho:792.0, LHV:19.90 },
+    EtOH:         { cat:"Oxygenates (validation)", name:"Ethanol (C2H6O)",             xC: 2.00, yH: 6.00, zO:1.00, rho:789.0, LHV:26.80 },
+    iPrOH:        { cat:"Oxygenates (validation)", name:"Isopropanol (C3H8O)",         xC: 3.00, yH: 8.00, zO:1.00, rho:786.0, LHV:30.00 },
+    BuOH:         { cat:"Oxygenates (validation)", name:"n-Butanol (C4H10O)",          xC: 4.00, yH:10.00, zO:1.00, rho:810.0, LHV:33.10 },
+    MTBE:         { cat:"Oxygenates (validation)", name:"MTBE (C5H12O)",               xC: 5.00, yH:12.00, zO:1.00, rho:740.0, LHV:35.00 },
+
+    Gasoline:     { cat:"Diesel/Gasoline (screening)", name:"Gasoline surrogate",      xC: 8.00, yH:18.00, zO:0.00, rho:740.0, LHV:43.50 },
+    Diesel:       { cat:"Diesel/Gasoline (screening)", name:"Diesel surrogate",        xC:14.00, yH:30.00, zO:0.00, rho:835.0, LHV:42.70 },
+
+    CH4:          { cat:"Gases (stoichiometry checks)", name:"Methane (gas, ref)",     xC: 1.00, yH: 4.00, zO:0.00, rho:  0.656, LHV:50.00 },
+    LCH4:         { cat:"Gases (stoichiometry checks)", name:"Liquid methane (cryogenic)", xC:1.00, yH:4.00, zO:0.00, rho:420.0, LHV:50.00 },
+    C3H8:         { cat:"Gases (stoichiometry checks)", name:"Propane (gas, ref)",     xC: 3.00, yH: 8.00, zO:0.00, rho:  1.88,  LHV:46.40 },
+    H2:           { cat:"Gases (stoichiometry checks)", name:"Hydrogen (gas, ref)",    xC: 0.00, yH: 2.00, zO:0.00, rho:  0.084, LHV:120.0 }
+  };
+
+  const FUELS = JSON.parse(JSON.stringify(DEFAULT_FUELS));
+  try {
+    const saved = localStorage.getItem("fuelsim_fuels");
+    if (saved) {
+      const obj = JSON.parse(saved);
+      for (const k of Object.keys(obj)) FUELS[k] = obj[k];
+    }
+  } catch(e) {}
+
+  function saveLocalFuels(){ try { localStorage.setItem("fuelsim_fuels", JSON.stringify(FUELS)); } catch(e) {} }
+  function resetLocalFuels(){
+    try { localStorage.removeItem("fuelsim_fuels"); } catch(e) {}
+    for (const k of Object.keys(FUELS)) delete FUELS[k];
+    for (const k of Object.keys(DEFAULT_FUELS)) FUELS[k] = JSON.parse(JSON.stringify(DEFAULT_FUELS[k]));
+  }
+
+  function mwFuel(f) { return f.xC*MW.C + f.yH*MW.H + f.zO*MW.O; }
+  function nuO2Stoich(f) { return f.xC + f.yH/4.0 - f.zO/2.0; }
+  function afrStoichMass(f) {
+    const nu = nuO2Stoich(f);
+    if (nu <= 0) throw new Error("Non-physical stoichiometric O2 requirement.");
+    const mwf = mwFuel(f);
+    if (mwf <= 0) throw new Error("Non-physical fuel molecular weight.");
+    const mO2 = nu * MW.O2;
+    return mO2 / (mwf * Y_O2_AIR);
+  }
+  function co2IntensityKgPerKg(f){
+    const mwf = mwFuel(f);
+    if (mwf <= 0) throw new Error("Non-physical fuel molecular weight.");
+    return (f.xC * MW.CO2) / mwf;
+  }
+  function h2oIntensityKgPerKg(f){
+    const mwf = mwFuel(f);
+    if (mwf <= 0) throw new Error("Non-physical fuel molecular weight.");
+    return ((f.yH/2.0) * MW.H2O) / mwf;
+  }
+  function co2PerKWhth_g(f){
+    const co2kgkg = co2IntensityKgPerKg(f);
+    if (f.LHV <= 0) throw new Error("Non-physical LHV.");
+    const kg_per_MJ = co2kgkg / f.LHV;
+    return kg_per_MJ * 3.6 * 1000.0;
+  }
+
+  function blendMass2(fA, fB, wA) {
+    const wB = 1 - wA;
+    const LHV = wA*fA.LHV + wB*fB.LHV;
+    const invRho = (wA / fA.rho) + (wB / fB.rho);
+    const rho = 1 / invRho;
+    const xC = wA*fA.xC + wB*fB.xC;
+    const yH = wA*fA.yH + wB*fB.yH;
+    const zO = wA*fA.zO + wB*fB.zO;
+    return { name:"", xC, yH, zO, rho, LHV };
+  }
+
+  function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+  function fmt(x, n=3){ return Number(x).toFixed(n); }
+  function showWarn(el, msg){
+    if (!msg){ el.style.display="none"; el.textContent=""; return; }
+    el.style.display="block"; el.textContent = msg;
+  }
+
+  function setDial(pathEl, value, vmin, vmax){
+    if (!pathEl) return;
+    if (!Number.isFinite(value)) { pathEl.style.strokeDasharray = "0 9999"; return; }
+    const p = clamp01((value - vmin) / (vmax - vmin));
+    const arc = 251;
+    pathEl.style.strokeDasharray = `${(p*arc).toFixed(1)} 9999`;
+  }
+
+  function setCol(el, value, vmin, vmax){
+    if (!el) return;
+    if (!Number.isFinite(value)) { el.style.height = "0%"; return; }
+    const p = clamp01((value - vmin) / (vmax - vmin));
+    el.style.height = (p*100).toFixed(1) + "%";
+  }
+
+  function setHBar(el, value, vmin, vmax){
+    if (!el) return;
+    if (!Number.isFinite(value)) { el.style.width = "0%"; return; }
+    const p = clamp01((value - vmin) / (vmax - vmin));
+    el.style.width = (p*100).toFixed(1) + "%";
+  }
+
+  const elFuelSearch = document.getElementById("fuelSearch");
+  const elFuelA = document.getElementById("fuelA");
+  const elFuelB = document.getElementById("fuelB");
+  const elMassA = document.getElementById("massA");
+  const elPillA = document.getElementById("pillA");
+  const elPillB = document.getElementById("pillB");
+  const warnBox = document.getElementById("warnBox");
+
+  // sliders + value pills
+  const elAfrActRange = document.getElementById("afrActRange");
+  const elAfrActVal   = document.getElementById("afrActVal");
+  const elQthMWRange  = document.getElementById("qthMWRange");
+  const elQthMWVal    = document.getElementById("qthMWVal");
+
+  let afrEnabled = true;
+  let qEnabled = true;
+
+  const gLHV = document.getElementById("gLHV");
+  const gRho = document.getElementById("gRho");
+  const gAFRst = document.getElementById("gAFRst");
+  const gPhi = document.getElementById("gPhi");
+  const gCO2kWh = document.getElementById("gCO2kWh");
+
+  const dLHV = document.getElementById("dLHV");
+  const dRho = document.getElementById("dRho");
+  const dAFR = document.getElementById("dAFR");
+  const dPhi = document.getElementById("dPhi");
+  const dCO2kWh = document.getElementById("dCO2kWh");
+
+  const cLHVvol = document.getElementById("cLHVvol");
+  const cCO2 = document.getElementById("cCO2");
+  const cH2O = document.getElementById("cH2O");
+  const cQair = document.getElementById("cQair");
+
+  const bLHVvol = document.getElementById("bLHVvol");
+  const bCO2kgkg = document.getElementById("bCO2kgkg");
+  const bH2Okgkg = document.getElementById("bH2Okgkg");
+  const bQair = document.getElementById("bQair");
+
+  const tFormula = document.getElementById("tFormula");
+  const tMW = document.getElementById("tMW");
+  const tNuO2 = document.getElementById("tNuO2");
+  const tLambda = document.getElementById("tLambda");
+  const tMdotF = document.getElementById("tMdotF");
+  const tMdotA = document.getElementById("tMdotA");
+
+  const hbMW = document.getElementById("hbMW");
+  const hbNuO2 = document.getElementById("hbNuO2");
+  const hbLambda = document.getElementById("hbLambda");
+  const hbMdotF = document.getElementById("hbMdotF");
+  const hbMdotA = document.getElementById("hbMdotA");
+
+  const elEditKey  = document.getElementById("editKey");
+  const elEditName = document.getElementById("editName");
+  const elEditXC   = document.getElementById("editXC");
+  const elEditYH   = document.getElementById("editYH");
+  const elEditZO   = document.getElementById("editZO");
+  const elEditRho  = document.getElementById("editRho");
+  const elEditLHV  = document.getElementById("editLHV");
+  const elEditMsg  = document.getElementById("editMsg");
+
+  function fuelKeys(){ return Object.keys(FUELS).sort(); }
+  function getCategory(k){ return FUELS[k]?.cat || "User (local)"; }
+  function matchesFilter(k, filter){
+    if (!filter) return true;
+    const f = FUELS[k];
+    const t = filter.toLowerCase().trim();
+    const hay = (k + " " + (f?.name||"") + " " + (f?.cat||"")).toLowerCase();
+    return hay.includes(t);
+  }
+
+  function rebuildDropdownGrouped(sel, keepValue, filterText){
+    const prev = keepValue ?? sel.value;
+    sel.innerHTML = "";
+
+    const keys = fuelKeys().filter(k => matchesFilter(k, filterText));
+    const byCat = new Map();
+    for (const k of keys) {
+      const cat = getCategory(k);
+      if (!byCat.has(cat)) byCat.set(cat, []);
+      byCat.get(cat).push(k);
     }
 
-    fuelSearch.addEventListener("input", ()=>refillSelects(fuelSearch.value));
-    refillSelects("");
-  </script>
+    let added = 0;
+    for (const cat of CAT_ORDER) {
+      const arr = byCat.get(cat);
+      if (!arr || arr.length === 0) continue;
+      const og = document.createElement("optgroup");
+      og.label = cat;
+      for (const k of arr) {
+        const f = FUELS[k];
+        const opt = document.createElement("option");
+        opt.value = k;
+        opt.textContent = `${k} — ${f.name}`;
+        og.appendChild(opt);
+        added++;
+      }
+      sel.appendChild(og);
+    }
+    for (const [cat, arr] of byCat.entries()) {
+      if (CAT_ORDER.includes(cat)) continue;
+      const og = document.createElement("optgroup");
+      og.label = cat;
+      for (const k of arr) {
+        const f = FUELS[k];
+        const opt = document.createElement("option");
+        opt.value = k;
+        opt.textContent = `${k} — ${f.name}`;
+        og.appendChild(opt);
+        added++;
+      }
+      sel.appendChild(og);
+    }
+
+    if (added === 0) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "No matches";
+      opt.disabled = true;
+      opt.selected = true;
+      sel.appendChild(opt);
+      return;
+    }
+
+    if (prev && FUELS[prev] && keys.includes(prev)) sel.value = prev;
+    else sel.value = keys[0];
+  }
+
+  function loadEditorFromKey(k){
+    const f = FUELS[k];
+    if (!f) return;
+    elEditName.value = f.name ?? k;
+    elEditXC.value = f.xC;
+    elEditYH.value = f.yH;
+    elEditZO.value = f.zO;
+    elEditRho.value = f.rho;
+    elEditLHV.value = f.LHV;
+  }
+
+  function refreshAllDropdowns(){
+    const filterText = elFuelSearch.value || "";
+    const a = elFuelA.value || "JetA";
+    const b = elFuelB.value || "HEFA";
+    const e = elEditKey.value || "JetA";
+
+    rebuildDropdownGrouped(elFuelA, a, filterText);
+    rebuildDropdownGrouped(elFuelB, b, filterText);
+    rebuildDropdownGrouped(elEditKey, e, filterText);
+
+    if (elFuelA.value && elFuelB.value && elFuelA.value === elFuelB.value) {
+      const keys = fuelKeys().filter(k => matchesFilter(k, filterText));
+      const alt = keys.find(x => x !== elFuelA.value);
+      if (alt) elFuelB.value = alt;
+    }
+
+    if (elEditKey.value) loadEditorFromKey(elEditKey.value);
+    update();
+  }
+
+  document.getElementById("btnSaveFuel").addEventListener("click", () => {
+    const k = (elEditKey.value || "").trim();
+    if (!k) { elEditMsg.textContent = "Error: choose a fuel key."; return; }
+
+    const name = elEditName.value.trim() || k;
+    const xC = parseFloat(elEditXC.value);
+    const yH = parseFloat(elEditYH.value);
+    const zO = parseFloat(elEditZO.value);
+    const rho = parseFloat(elEditRho.value);
+    const LHV = parseFloat(elEditLHV.value);
+
+    if (![xC,yH,zO,rho,LHV].every(v => Number.isFinite(v))) {
+      elEditMsg.textContent = "Error: numeric fields must be valid numbers.";
+      return;
+    }
+    if (xC < 0 || yH < 0 || zO < 0 || rho <= 0 || LHV <= 0) {
+      elEditMsg.textContent = "Error: non-physical values (check rho/LHV and x/y/z).";
+      return;
+    }
+
+    const existing = FUELS[k] || {};
+    const cat = existing.cat || "User (local)";
+    FUELS[k] = { cat, name, xC, yH, zO, rho, LHV };
+
+    saveLocalFuels();
+    elEditMsg.textContent = `Saved '${k}'. (Stored locally in this browser.)`;
+    refreshAllDropdowns();
+  });
+
+  document.getElementById("btnNewFuel").addEventListener("click", () => {
+    const newKey = prompt("Enter new fuel key (e.g., eKero):");
+    if (!newKey) return;
+    const k = newKey.trim();
+    if (!k) return;
+
+    if (!FUELS[k]) {
+      FUELS[k] = { cat:"User (local)", name:k, xC:12, yH:26, zO:0, rho:780, LHV:43.3 };
+      saveLocalFuels();
+    }
+    refreshAllDropdowns();
+    elEditKey.value = k;
+    loadEditorFromKey(k);
+    elEditMsg.textContent = `Created '${k}'. Update x/y/z/rho/LHV then click Save.`;
+  });
+
+  document.getElementById("btnResetLocal").addEventListener("click", () => {
+    if (!confirm("Reset local edits? This removes fuels saved in THIS browser only.")) return;
+    resetLocalFuels();
+    elEditMsg.textContent = "Local edits cleared. Back to defaults.";
+    refreshAllDropdowns();
+  });
+
+  elEditKey.addEventListener("change", () => loadEditorFromKey(elEditKey.value));
+
+  function setAfrEnabled(on){
+    afrEnabled = on;
+    elAfrActRange.disabled = !on;
+    elAfrActVal.textContent = on ? Number(elAfrActRange.value).toFixed(1) : "—";
+  }
+  function setQEnabled(on){
+    qEnabled = on;
+    elQthMWRange.disabled = !on;
+    elQthMWVal.textContent = on ? Number(elQthMWRange.value).toFixed(1) : "—";
+  }
+
+  document.getElementById("afrClear").addEventListener("click", () => { setAfrEnabled(false); update(); });
+  document.getElementById("qClear").addEventListener("click", () => { setQEnabled(false); update(); });
+
+  document.getElementById("q10").addEventListener("click", () => { setQEnabled(true); elQthMWRange.value = 10; elQthMWVal.textContent = "10.0"; update(); });
+  document.getElementById("q50").addEventListener("click", () => { setQEnabled(true); elQthMWRange.value = 50; elQthMWVal.textContent = "50.0"; update(); });
+
+  document.getElementById("afrStoich").addEventListener("click", () => {
+    setAfrEnabled(true);
+    const keyA = elFuelA.value, keyB = elFuelB.value;
+    if (!FUELS[keyA] || !FUELS[keyB] || keyA === keyB) return;
+    const wA = parseFloat(elMassA.value)/100.0;
+    const blend = blendMass2(FUELS[keyA], FUELS[keyB], wA);
+    let afr_st;
+    try { afr_st = afrStoichMass(blend); } catch(e){ return; }
+    const v = Math.max(parseFloat(elAfrActRange.min), Math.min(parseFloat(elAfrActRange.max), afr_st));
+    elAfrActRange.value = v.toFixed(1);
+    elAfrActVal.textContent = Number(elAfrActRange.value).toFixed(1);
+    update();
+  });
+
+  elAfrActRange.addEventListener("input", () => {
+    setAfrEnabled(true);
+    elAfrActVal.textContent = Number(elAfrActRange.value).toFixed(1);
+    update();
+  });
+
+  elQthMWRange.addEventListener("input", () => {
+    setQEnabled(true);
+    elQthMWVal.textContent = Number(elQthMWRange.value).toFixed(1);
+    update();
+  });
+
+  function update() {
+    const keyA = elFuelA.value;
+    const keyB = elFuelB.value;
+
+    const wA_pct = parseFloat(elMassA.value);
+    const wA = wA_pct / 100.0;
+    const wB_pct = 100 - wA_pct;
+
+    elPillA.textContent = `A: ${wA_pct.toFixed(0)}%`;
+    elPillB.textContent = `B: ${wB_pct.toFixed(0)}%`;
+
+    if (!keyA || !keyB || !FUELS[keyA] || !FUELS[keyB]) {
+      showWarn(warnBox, "Fuel selection is missing (check filter).");
+      return;
+    }
+    if (keyA === keyB) {
+      showWarn(warnBox, "Please choose two different fuels.");
+      return;
+    }
+
+    if ((keyA === "LCH4" && ["JetA","HEFA","FT","ATJ"].includes(keyB)) ||
+        (keyB === "LCH4" && ["JetA","HEFA","FT","ATJ"].includes(keyA))) {
+      showWarn(warnBox, "Note: Liquid methane is cryogenic; blending with Jet fuels is not a practical fuel-handling basis. Use for screening/trends only.");
+    } else {
+      showWarn(warnBox, "");
+    }
+
+    try {
+      const fA = FUELS[keyA];
+      const fB = FUELS[keyB];
+
+      const blend = blendMass2(fA, fB, wA);
+
+      const mwf = mwFuel(blend);
+      const nuO2 = nuO2Stoich(blend);
+      const afr_st = afrStoichMass(blend);
+      const co2kgkg = co2IntensityKgPerKg(blend);
+      const h2okgkg = h2oIntensityKgPerKg(blend);
+      const co2gkWh = co2PerKWhth_g(blend);
+      const LHVvol = blend.LHV * blend.rho / 1000.0;
+
+      const afr_act = (afrEnabled ? Number(elAfrActRange.value) : NaN);
+      const hasAFRact = Number.isFinite(afr_act) && afr_act > 0;
+
+      const qMW = (qEnabled ? Number(elQthMWRange.value) : NaN);
+      const hasQ = Number.isFinite(qMW) && qMW > 0;
+
+      let phi = NaN, lambda = NaN, q_air = NaN;
+      let mdot_f = NaN, mdot_a = NaN;
+
+      if (hasAFRact) {
+        phi = afr_st / afr_act;
+        lambda = 1.0 / phi;
+        q_air = blend.LHV / afr_act;
+
+        if (hasQ) {
+          const Q_MJps = qMW; // MW = MJ/s
+          mdot_f = Q_MJps / blend.LHV;
+          mdot_a = afr_act * mdot_f;
+        }
+      }
+
+      gLHV.textContent = fmt(blend.LHV, 2);
+      setDial(dLHV, blend.LHV, 20, 50);
+
+      gRho.textContent = fmt(blend.rho, 1);
+      setDial(dRho, blend.rho, 650, 900);
+
+      gAFRst.textContent = fmt(afr_st, 2);
+      setDial(dAFR, afr_st, 5, 25);
+
+      gCO2kWh.textContent = fmt(co2gkWh, 1);
+      setDial(dCO2kWh, co2gkWh, 150, 350);
+
+      bLHVvol.textContent = fmt(LHVvol, 2);
+      setCol(cLHVvol, LHVvol, 10, 40);
+
+      bCO2kgkg.textContent = fmt(co2kgkg, 3);
+      setCol(cCO2, co2kgkg, 1.5, 3.5);
+
+      bH2Okgkg.textContent = fmt(h2okgkg, 3);
+      setCol(cH2O, h2okgkg, 0.5, 2.0);
+
+      if (hasAFRact){
+        gPhi.textContent = fmt(phi, 3);
+        setDial(dPhi, phi, 0.2, 2.0);
+
+        bQair.textContent = fmt(q_air, 3);
+        setCol(cQair, q_air, 0.5, 5.0);
+
+        tLambda.textContent = fmt(lambda, 3);
+      } else {
+        gPhi.textContent = "—";
+        setDial(dPhi, NaN, 0.2, 2.0);
+
+        bQair.textContent = "—";
+        setCol(cQair, NaN, 0.5, 5.0);
+
+        tLambda.textContent = "—";
+      }
+
+      tFormula.textContent = `C${fmt(blend.xC,3)}H${fmt(blend.yH,3)}O${fmt(blend.zO,3)}`;
+      tMW.textContent = fmt(mwf, 2);
+      tNuO2.textContent = fmt(nuO2, 4);
+
+      tMdotF.textContent = (hasAFRact && hasQ) ? fmt(mdot_f, 6) : "—";
+      tMdotA.textContent = (hasAFRact && hasQ) ? fmt(mdot_a, 6) : "—";
+
+      setHBar(hbMW, mwf, 120, 200);
+      setHBar(hbNuO2, nuO2, 10, 25);
+      setHBar(hbLambda, lambda, 0.5, 3.0);
+
+      if (hasAFRact && hasQ){
+        setHBar(hbMdotF, mdot_f, 0.0, 1.0);
+        setHBar(hbMdotA, mdot_a, 0.0, 25.0);
+      } else {
+        setHBar(hbMdotF, NaN, 0.0, 1.0);
+        setHBar(hbMdotA, NaN, 0.0, 25.0);
+      }
+
+    } catch (e) {
+      showWarn(warnBox, "Computation error: " + (e?.message || e));
+    }
+  }
+
+  elFuelA.addEventListener("change", update);
+  elFuelB.addEventListener("change", update);
+  elMassA.addEventListener("input", update);
+  elFuelSearch.addEventListener("input", () => refreshAllDropdowns());
+
+  function initDropdowns(){
+    refreshAllDropdowns();
+    if (FUELS.JetA) elFuelB.value = "JetA";
+    if (FUELS.HEFA) elFuelA.value = "HEFA";
+
+    elAfrActVal.textContent = Number(elAfrActRange.value).toFixed(1);
+    elQthMWVal.textContent = Number(elQthMWRange.value).toFixed(1);
+
+    setAfrEnabled(true);
+    setQEnabled(true);
+
+    update();
+  }
+  initDropdowns();
+</script>
 </body>
 </html>
