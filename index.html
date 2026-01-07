@@ -46,7 +46,7 @@
     }
     button.primary{background:rgba(98,168,255,.18)}
 
-    /* ===== Range control (NEW) ===== */
+    /* ===== Range control ===== */
     .rangeBox{
       border:1px solid var(--line);
       border-radius:12px;
@@ -137,7 +137,7 @@
     .barTitle{font-size:12px;color:var(--muted)}
     .barRow{
       display:grid;
-      grid-template-columns: 140px 1fr 90px;
+      grid-template-columns: 160px 1fr 110px;
       gap:10px;
       align-items:center;
       padding:6px 0;
@@ -162,6 +162,53 @@
       transition:width .25s ease;
     }
     .barVal{font-size:12px;text-align:right}
+
+    /* ===== Tooltip (NEW) ===== */
+    .tt{
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: help;
+      user-select: none;
+    }
+    .tt .infoDot{
+      width:16px;height:16px; border-radius:999px;
+      display:inline-flex; align-items:center; justify-content:center;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.05);
+      color:var(--muted);
+      font-size:11px;
+      line-height:1;
+      flex:0 0 auto;
+    }
+    .tt .tip{
+      position:absolute;
+      left:0;
+      top: calc(100% + 8px);
+      width: min(360px, 80vw);
+      z-index: 50;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:rgba(10,16,30,.96);
+      color:var(--text);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      display:none;
+    }
+    .tt:hover .tip, .tt:focus-within .tip{ display:block; }
+    .tip .tTitle{ font-size:12px; font-weight:700; margin:0 0 6px; color:#d8e4ff;}
+    .tip .tDef{ font-size:12px; margin:0 0 6px; color:var(--muted); line-height:1.35;}
+    .tip .tEq{
+      font-size:12px;
+      margin:0;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.04);
+      overflow:auto;
+    }
+    .tip code{ font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; }
   </style>
 </head>
 
@@ -209,7 +256,7 @@
         <label for="blendName">Optional blend name</label>
         <input id="blendName" type="text" placeholder="Leave blank for auto-name" />
 
-        <!-- ✅ UPDATED: Operating inputs converted to sliders -->
+        <!-- Operating inputs -->
         <div style="margin-top:14px; padding:12px; border:1px solid var(--line); border-radius:12px; background:rgba(255,255,255,.03)">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
             <div style="font-weight:700; font-size:12px; color:#d8e4ff">Operating inputs (optional)</div>
@@ -315,7 +362,17 @@
         <div class="dialGrid">
           <div class="dialCard">
             <div class="dialTop">
-              <div class="dialTitle">LHV</div>
+              <div class="dialTitle">
+                <span class="tt" tabindex="0">
+                  LHV
+                  <span class="infoDot">i</span>
+                  <span class="tip">
+                    <p class="tTitle">LHV (Lower Heating Value)</p>
+                    <p class="tDef">Energy released per unit mass of fuel, excluding latent heat of water condensation.</p>
+                    <p class="tEq"><code>LHV_blend = wA·LHV_A + wB·LHV_B</code></p>
+                  </span>
+                </span>
+              </div>
               <div class="dialValue"><span class="mono" id="gLHV">—</span><span class="dialUnit">MJ/kg</span></div>
             </div>
             <div class="dialWrap">
@@ -329,7 +386,17 @@
 
           <div class="dialCard">
             <div class="dialTop">
-              <div class="dialTitle">Density</div>
+              <div class="dialTitle">
+                <span class="tt" tabindex="0">
+                  Density
+                  <span class="infoDot">i</span>
+                  <span class="tip">
+                    <p class="tTitle">Density (ρ)</p>
+                    <p class="tDef">Mass per unit volume at the stated reference condition.</p>
+                    <p class="tEq"><code>1/ρ_blend = wA/ρ_A + wB/ρ_B</code></p>
+                  </span>
+                </span>
+              </div>
               <div class="dialValue"><span class="mono" id="gRho">—</span><span class="dialUnit">kg/m³</span></div>
             </div>
             <div class="dialWrap">
@@ -343,7 +410,17 @@
 
           <div class="dialCard">
             <div class="dialTop">
-              <div class="dialTitle">AFRst</div>
+              <div class="dialTitle">
+                <span class="tt" tabindex="0">
+                  AFRst
+                  <span class="infoDot">i</span>
+                  <span class="tip">
+                    <p class="tTitle">Stoichiometric AFR (AFRst)</p>
+                    <p class="tDef">Air–fuel ratio required for complete combustion (no excess O₂, no CO).</p>
+                    <p class="tEq"><code>νO2 = x + y/4 − z/2; AFRst = (νO2·MW_O2)/(MW_fuel·Y_O2)</code></p>
+                  </span>
+                </span>
+              </div>
               <div class="dialValue"><span class="mono" id="gAFRst">—</span><span class="dialUnit">kg/kg</span></div>
             </div>
             <div class="dialWrap">
@@ -357,7 +434,17 @@
 
           <div class="dialCard">
             <div class="dialTop">
-              <div class="dialTitle">ϕ (needs AFRact)</div>
+              <div class="dialTitle">
+                <span class="tt" tabindex="0">
+                  ϕ (needs AFRact)
+                  <span class="infoDot">i</span>
+                  <span class="tip">
+                    <p class="tTitle">Equivalence ratio (ϕ)</p>
+                    <p class="tDef">Measure of richness: ϕ&gt;1 rich, ϕ&lt;1 lean.</p>
+                    <p class="tEq"><code>ϕ = AFRst / AFRact</code></p>
+                  </span>
+                </span>
+              </div>
               <div class="dialValue"><span class="mono" id="gPhi">—</span><span class="dialUnit">—</span></div>
             </div>
             <div class="dialWrap">
@@ -371,7 +458,17 @@
 
           <div class="dialCard">
             <div class="dialTop">
-              <div class="dialTitle">CO₂ per energy</div>
+              <div class="dialTitle">
+                <span class="tt" tabindex="0">
+                  CO₂ per energy
+                  <span class="infoDot">i</span>
+                  <span class="tip">
+                    <p class="tTitle">CO₂ per thermal energy</p>
+                    <p class="tDef">Combustion CO₂ per delivered thermal energy (LHV basis).</p>
+                    <p class="tEq"><code>CO2_g/kWh = (CO2_kg/kg / LHV_MJ/kg) · 3.6 · 1000</code></p>
+                  </span>
+                </span>
+              </div>
               <div class="dialValue"><span class="mono" id="gCO2kWh">—</span><span class="dialUnit">g/kWhₜₕ</span></div>
             </div>
             <div class="dialWrap">
@@ -393,22 +490,65 @@
           <div class="cols">
             <div>
               <div class="col"><div class="colFill" id="cLHVvol"></div></div>
-              <div class="colLbl">LHV MJ/L</div>
+              <div class="colLbl">
+                <span class="tt" tabindex="0">
+                  LHV MJ/L
+                  <span class="infoDot">i</span>
+                  <span class="tip">
+                    <p class="tTitle">Volumetric LHV</p>
+                    <p class="tDef">Energy per unit volume; useful for tank sizing and volume flow comparisons.</p>
+                    <p class="tEq"><code>LHV_vol = LHV·ρ/1000</code></p>
+                  </span>
+                </span>
+              </div>
               <div class="small" style="text-align:center"><span class="mono" id="bLHVvol">—</span></div>
             </div>
+
             <div>
               <div class="col"><div class="colFill" id="cCO2"></div></div>
-              <div class="colLbl">CO₂ kg/kg</div>
+              <div class="colLbl">
+                <span class="tt" tabindex="0">
+                  CO₂ kg/kg
+                  <span class="infoDot">i</span>
+                  <span class="tip">
+                    <p class="tTitle">CO₂ intensity (per kg fuel)</p>
+                    <p class="tDef">Complete-combustion CO₂ produced per kg of fuel.</p>
+                    <p class="tEq"><code>CO2_kg/kg = x·MW_CO2 / MW_fuel</code></p>
+                  </span>
+                </span>
+              </div>
               <div class="small" style="text-align:center"><span class="mono" id="bCO2kgkg">—</span></div>
             </div>
+
             <div>
               <div class="col"><div class="colFill" id="cH2O"></div></div>
-              <div class="colLbl">H₂O kg/kg</div>
+              <div class="colLbl">
+                <span class="tt" tabindex="0">
+                  H₂O kg/kg
+                  <span class="infoDot">i</span>
+                  <span class="tip">
+                    <p class="tTitle">H₂O intensity (per kg fuel)</p>
+                    <p class="tDef">Water formed from hydrogen under complete combustion.</p>
+                    <p class="tEq"><code>H2O_kg/kg = (y/2)·MW_H2O / MW_fuel</code></p>
+                  </span>
+                </span>
+              </div>
               <div class="small" style="text-align:center"><span class="mono" id="bH2Okgkg">—</span></div>
             </div>
+
             <div>
               <div class="col"><div class="colFill" id="cQair"></div></div>
-              <div class="colLbl">q_air MJ/kg air</div>
+              <div class="colLbl">
+                <span class="tt" tabindex="0">
+                  q_air MJ/kg air
+                  <span class="infoDot">i</span>
+                  <span class="tip">
+                    <p class="tTitle">Heat per kg air (screening)</p>
+                    <p class="tDef">Thermal energy released per kg of air at the selected AFRact.</p>
+                    <p class="tEq"><code>q_air = LHV / AFRact</code></p>
+                  </span>
+                </span>
+              </div>
               <div class="small" style="text-align:center"><span class="mono" id="bQair">—</span></div>
             </div>
           </div>
@@ -421,37 +561,97 @@
           </div>
 
           <div class="barRow">
-            <div class="barLbl">Formula</div>
+            <div class="barLbl">
+              <span class="tt" tabindex="0">
+                Formula
+                <span class="infoDot">i</span>
+                <span class="tip">
+                  <p class="tTitle">Surrogate formula</p>
+                  <p class="tDef">Blend surrogate computed by mass-weighted averaging of x,y,z.</p>
+                  <p class="tEq"><code>x = wA·xA + wB·xB (same for y,z)</code></p>
+                </span>
+              </span>
+            </div>
             <div class="barText mono" id="tFormula">—</div>
             <div class="barVal mono"></div>
           </div>
 
           <div class="barRow">
-            <div class="barLbl">MW (g/mol)</div>
+            <div class="barLbl">
+              <span class="tt" tabindex="0">
+                MW (g/mol)
+                <span class="infoDot">i</span>
+                <span class="tip">
+                  <p class="tTitle">Molecular weight of surrogate fuel</p>
+                  <p class="tDef">Computed from the surrogate formula CxHyOz.</p>
+                  <p class="tEq"><code>MW_fuel = x·MW_C + y·MW_H + z·MW_O</code></p>
+                </span>
+              </span>
+            </div>
             <div class="barTrack"><div class="barFill" id="hbMW"></div></div>
             <div class="barVal mono" id="tMW">—</div>
           </div>
 
           <div class="barRow">
-            <div class="barLbl">νO₂ (mol/mol)</div>
+            <div class="barLbl">
+              <span class="tt" tabindex="0">
+                νO₂ (mol/mol)
+                <span class="infoDot">i</span>
+                <span class="tip">
+                  <p class="tTitle">Stoichiometric O₂ requirement</p>
+                  <p class="tDef">Moles of O₂ needed per mole fuel for complete combustion.</p>
+                  <p class="tEq"><code>νO2 = x + y/4 − z/2</code></p>
+                </span>
+              </span>
+            </div>
             <div class="barTrack"><div class="barFill" id="hbNuO2"></div></div>
             <div class="barVal mono" id="tNuO2">—</div>
           </div>
 
           <div class="barRow">
-            <div class="barLbl">λ (—)</div>
+            <div class="barLbl">
+              <span class="tt" tabindex="0">
+                λ (—)
+                <span class="infoDot">i</span>
+                <span class="tip">
+                  <p class="tTitle">Excess-air ratio (λ)</p>
+                  <p class="tDef">λ&gt;1 lean (excess air), λ&lt;1 rich.</p>
+                  <p class="tEq"><code>λ = AFRact / AFRst = 1/ϕ</code></p>
+                </span>
+              </span>
+            </div>
             <div class="barTrack"><div class="barFill" id="hbLambda"></div></div>
             <div class="barVal mono" id="tLambda">—</div>
           </div>
 
           <div class="barRow">
-            <div class="barLbl">ṁf (kg/s)</div>
+            <div class="barLbl">
+              <span class="tt" tabindex="0">
+                ṁf (kg/s)
+                <span class="infoDot">i</span>
+                <span class="tip">
+                  <p class="tTitle">Fuel mass flow rate</p>
+                  <p class="tDef">Fuel needed to deliver target thermal power Q̇ (LHV basis).</p>
+                  <p class="tEq"><code>ṁf = Q̇(MJ/s) / LHV(MJ/kg)</code></p>
+                </span>
+              </span>
+            </div>
             <div class="barTrack"><div class="barFill" id="hbMdotF"></div></div>
             <div class="barVal mono" id="tMdotF">—</div>
           </div>
 
           <div class="barRow">
-            <div class="barLbl">ṁa (kg/s)</div>
+            <div class="barLbl">
+              <span class="tt" tabindex="0">
+                ṁa (kg/s)
+                <span class="infoDot">i</span>
+                <span class="tip">
+                  <p class="tTitle">Air mass flow rate</p>
+                  <p class="tDef">Air required at the selected AFRact.</p>
+                  <p class="tEq"><code>ṁa = AFRact · ṁf</code></p>
+                </span>
+              </span>
+            </div>
             <div class="barTrack"><div class="barFill" id="hbMdotA"></div></div>
             <div class="barVal mono" id="tMdotA">—</div>
           </div>
@@ -622,16 +822,14 @@
   const elMassA = document.getElementById("massA");
   const elPillA = document.getElementById("pillA");
   const elPillB = document.getElementById("pillB");
-  const elName  = document.getElementById("blendName");
   const warnBox = document.getElementById("warnBox");
 
-  // ✅ NEW: slider inputs + value pills
+  // sliders + value pills
   const elAfrActRange = document.getElementById("afrActRange");
   const elAfrActVal   = document.getElementById("afrActVal");
   const elQthMWRange  = document.getElementById("qthMWRange");
   const elQthMWVal    = document.getElementById("qthMWVal");
 
-  // ✅ internal state to represent "cleared"
   let afrEnabled = true;
   let qEnabled = true;
 
@@ -831,7 +1029,6 @@
 
   elEditKey.addEventListener("change", () => loadEditorFromKey(elEditKey.value));
 
-  /* ✅ NEW: slider UI helpers */
   function setAfrEnabled(on){
     afrEnabled = on;
     elAfrActRange.disabled = !on;
@@ -849,7 +1046,6 @@
   document.getElementById("q10").addEventListener("click", () => { setQEnabled(true); elQthMWRange.value = 10; elQthMWVal.textContent = "10.0"; update(); });
   document.getElementById("q50").addEventListener("click", () => { setQEnabled(true); elQthMWRange.value = 50; elQthMWVal.textContent = "50.0"; update(); });
 
-  // Set AFR slider equal to AFRst for current blend
   document.getElementById("afrStoich").addEventListener("click", () => {
     setAfrEnabled(true);
     const keyA = elFuelA.value, keyB = elFuelB.value;
@@ -858,7 +1054,6 @@
     const blend = blendMass2(FUELS[keyA], FUELS[keyB], wA);
     let afr_st;
     try { afr_st = afrStoichMass(blend); } catch(e){ return; }
-    // clamp into slider range
     const v = Math.max(parseFloat(elAfrActRange.min), Math.min(parseFloat(elAfrActRange.max), afr_st));
     elAfrActRange.value = v.toFixed(1);
     elAfrActVal.textContent = Number(elAfrActRange.value).toFixed(1);
@@ -918,7 +1113,6 @@
       const co2gkWh = co2PerKWhth_g(blend);
       const LHVvol = blend.LHV * blend.rho / 1000.0;
 
-      // ✅ sliders to numeric values (or disabled)
       const afr_act = (afrEnabled ? Number(elAfrActRange.value) : NaN);
       const hasAFRact = Number.isFinite(afr_act) && afr_act > 0;
 
@@ -934,7 +1128,7 @@
         q_air = blend.LHV / afr_act;
 
         if (hasQ) {
-          const Q_MJps = qMW;
+          const Q_MJps = qMW; // MW = MJ/s
           mdot_f = Q_MJps / blend.LHV;
           mdot_a = afr_act * mdot_f;
         }
@@ -1006,7 +1200,6 @@
   elFuelA.addEventListener("change", update);
   elFuelB.addEventListener("change", update);
   elMassA.addEventListener("input", update);
-  elName.addEventListener("input", update);
   elFuelSearch.addEventListener("input", () => refreshAllDropdowns());
 
   function initDropdowns(){
@@ -1014,11 +1207,9 @@
     if (FUELS.JetA) elFuelB.value = "JetA";
     if (FUELS.HEFA) elFuelA.value = "HEFA";
 
-    // initialize slider value pills
     elAfrActVal.textContent = Number(elAfrActRange.value).toFixed(1);
     elQthMWVal.textContent = Number(elQthMWRange.value).toFixed(1);
 
-    // start enabled
     setAfrEnabled(true);
     setQEnabled(true);
 
