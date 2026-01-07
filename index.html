@@ -3,24 +3,24 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FuelSim — SAF Blend + Combustor Demo (A + B)</title>
+  <title>Fuel Blend Calculator (Mass %)</title>
   <style>
     :root{
       --bg:#0b1220; --card:#121a2b; --card2:#0f1726; --text:#e7eefc; --muted:#a7b4d1;
-      --line:rgba(255,255,255,.10); --accent:#62a8ff; --warn:#ffcc66; --ok:#6dffb2;
+      --line:rgba(255,255,255,.10); --accent:#62a8ff; --warn:#ffcc66;
     }
     *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
     body{margin:0;background:linear-gradient(180deg,#0b1220,#070c16);color:var(--text)}
-    .wrap{max-width:1180px;margin:0 auto;padding:24px}
+    .wrap{max-width:1020px;margin:0 auto;padding:24px}
     .topbar{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
-    .title{font-size:20px;font-weight:800;margin:0}
+    .title{font-size:20px;font-weight:700;margin:0}
     .subtitle{margin:6px 0 0;color:var(--muted);font-size:13px;line-height:1.4}
-    .grid{display:grid;grid-template-columns:1.02fr 1fr;gap:16px;margin-top:16px}
-    @media (max-width:980px){ .grid{grid-template-columns:1fr} }
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+    @media (max-width:900px){ .grid{grid-template-columns:1fr} }
     .card{background:rgba(18,26,43,.92);border:1px solid var(--line);border-radius:14px;padding:16px}
     .card h3{margin:0 0 10px;font-size:14px;letter-spacing:.2px;color:#d8e4ff}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    @media (max-width:560px){ .row{grid-template-columns:1fr} }
+    @media (max-width:520px){ .row{grid-template-columns:1fr} }
     label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
     select,input[type="text"],input[type="number"]{
       width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);
@@ -37,10 +37,6 @@
       margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,204,102,.35);
       background:rgba(255,204,102,.08);color:var(--warn);font-size:12px;line-height:1.45;display:none
     }
-    .ok{
-      margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(109,255,178,.25);
-      background:rgba(109,255,178,.06);color:var(--ok);font-size:12px;line-height:1.45;display:none
-    }
     .footer{margin-top:14px;color:var(--muted);font-size:11px}
     .small{font-size:11px;color:var(--muted)}
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -49,85 +45,157 @@
       background:rgba(255,255,255,.06);color:var(--text);cursor:pointer
     }
     button.primary{background:rgba(98,168,255,.18)}
-    .sep{height:1px;background:var(--line);margin:14px 0}
+
+    /* ===== Range control ===== */
+    .rangeBox{
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:rgba(255,255,255,.02);
+      padding:10px 10px 8px;
+    }
+    .rangeHead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
+    .rangeVal{
+      padding:4px 8px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.04);
+      font-size:12px;color:var(--text);white-space:nowrap
+    }
+    .rangeSub{display:flex;justify-content:space-between;margin-top:6px;color:var(--muted);font-size:11px}
+    .rangeBtns{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+    .rangeBtns button{padding:7px 10px;font-size:12px}
 
     /* ===== Tooltip ===== */
-    .tt{position:relative;display:inline-flex;align-items:center;gap:6px;cursor:help;user-select:none}
+    .tt{
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: help;
+      user-select: none;
+    }
     .tt .infoDot{
-      width:16px;height:16px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;
-      border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted);font-size:11px;line-height:1;
+      width:16px;height:16px;border-radius:999px;
+      display:inline-flex;align-items:center;justify-content:center;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.05);
+      color:var(--muted);
+      font-size:11px;
+      line-height:1;
     }
     .tt .tip{
-      position:absolute;left:0;top:calc(100% + 8px);width:min(420px, 86vw);z-index:50;
-      padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(10,16,30,.96);
-      color:var(--text);box-shadow:0 10px 30px rgba(0,0,0,.35);display:none;
+      position:absolute;
+      left:0;
+      top: calc(100% + 8px);
+      width: min(360px, 80vw);
+      z-index: 50;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:rgba(10,16,30,.96);
+      color:var(--text);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      display:none;
+      transform:translateY(2px);
     }
-    .tt:hover .tip,.tt:focus-within .tip{display:block}
-    .tip .tTitle{font-size:12px;font-weight:800;margin:0 0 6px;color:#d8e4ff}
+    .tt:hover .tip, .tt:focus-within .tip{ display:block; }
+    .tip .tTitle{font-size:12px;font-weight:700;margin:0 0 6px;color:#d8e4ff}
     .tip .tDef{font-size:12px;margin:0 0 6px;color:var(--muted);line-height:1.35}
-    .tip .tEq{font-size:12px;margin:0;padding:8px 10px;border-radius:10px;border:1px solid var(--line);
-      background:rgba(255,255,255,.04);overflow:auto}
+    .tip .tEq{
+      font-size:12px;margin:0;padding:8px 10px;border-radius:10px;border:1px solid var(--line);
+      background:rgba(255,255,255,.04);overflow:auto
+    }
     .tip code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
     .tt .tip:before{
-      content:"";position:absolute;top:-8px;left:14px;border:8px solid transparent;
-      border-bottom-color:rgba(10,16,30,.96);filter: drop-shadow(0 1px 0 rgba(255,255,255,.08));
+      content:"";
+      position:absolute;
+      top:-8px; left:14px;
+      border:8px solid transparent;
+      border-bottom-color:rgba(10,16,30,.96);
+      filter: drop-shadow(0 1px 0 rgba(255,255,255,.08));
     }
 
     /* ===== Dials ===== */
     .dialGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-    @media (max-width:560px){ .dialGrid{grid-template-columns:1fr} }
+    @media (max-width:520px){ .dialGrid{grid-template-columns:1fr} }
     .dialCard{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.03);padding:12px}
     .dialTop{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
     .dialTitle{font-size:12px;color:var(--muted)}
-    .dialValue{font-size:14px;font-weight:800}
+    .dialValue{font-size:14px;font-weight:700}
     .dialUnit{font-size:11px;color:var(--muted);margin-left:6px}
     .dialWrap{display:flex;justify-content:center;align-items:center;margin-top:8px}
     .dialSvg{width:180px;height:110px}
     .dialTrack{stroke:rgba(255,255,255,.10);stroke-width:10;fill:none;stroke-linecap:round}
-    .dialProg{stroke:rgba(98,168,255,.95);stroke-width:10;fill:none;stroke-linecap:round;
-      stroke-dasharray: 0 9999; transition:stroke-dasharray .25s ease;}
+    .dialProg{
+      stroke:rgba(98,168,255,.95);stroke-width:10;fill:none;stroke-linecap:round;
+      stroke-dasharray: 0 9999; transition:stroke-dasharray .25s ease;
+    }
     .dialMinMax{display:flex;justify-content:space-between;margin-top:6px;color:var(--muted);font-size:11px}
 
     /* ===== Column chart ===== */
     .colChart{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.03);padding:12px}
     .colTop{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
     .colTitle{font-size:12px;color:var(--muted)}
-    .cols{display:grid;grid-template-columns:repeat(4, minmax(0,1fr));gap:10px;margin-top:10px;align-items:end}
-    @media (max-width: 980px){ .cols{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
-    @media (max-width: 560px){ .cols{ grid-template-columns:1fr; } }
-    .col{position:relative;height:120px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.04);overflow:hidden}
-    .colFill{position:absolute;left:0;right:0;bottom:0;height:0%;
-      background:linear-gradient(180deg,rgba(255,204,102,.85),rgba(255,204,102,.20));transition:height .25s ease;}
+    .colValue{font-size:14px;font-weight:700}
+    .cols{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0,1fr));
+      gap:10px;
+      margin-top:10px;
+      align-items:end;
+    }
+    @media (max-width: 900px){ .cols{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
+    @media (max-width: 520px){ .cols{ grid-template-columns:1fr; } }
+    .cols > div{ min-width:0; }
+    .col{
+      position:relative;
+      height:120px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:rgba(255,255,255,.04);
+      overflow:hidden
+    }
+    .colFill{
+      position:absolute;left:0;right:0;bottom:0;height:0%;
+      background:linear-gradient(180deg,rgba(255,204,102,.85),rgba(255,204,102,.20));
+      transition:height .25s ease;
+    }
     .colLbl{margin-top:6px;font-size:11px;color:var(--muted);text-align:center;display:flex;justify-content:center}
     .colLbl .tt{justify-content:center}
 
     /* ===== Horizontal bars ===== */
-    .barBox{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.03);padding:12px;margin-top:12px}
+    .barBox{
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:rgba(255,255,255,.03);
+      padding:12px;
+      margin-top:12px;
+    }
     .barTitleRow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px}
     .barTitle{font-size:12px;color:var(--muted)}
-    .barRow{display:grid;grid-template-columns: 180px 1fr 120px;gap:10px;align-items:center;padding:6px 0}
-    @media (max-width:560px){ .barRow{grid-template-columns:1fr} .barVal{text-align:left} }
+    .barRow{
+      display:grid;
+      grid-template-columns: 170px 1fr 110px;
+      gap:10px;
+      align-items:center;
+      padding:6px 0;
+    }
+    @media (max-width:520px){
+      .barRow{ grid-template-columns: 1fr; }
+      .barVal{ text-align:left; }
+    }
     .barLbl{font-size:12px;color:var(--muted)}
     .barText{font-size:12px;color:var(--text);opacity:.95}
-    .barTrack{height:10px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.04);overflow:hidden}
-    .barFill{height:100%;width:0%;background:linear-gradient(90deg, rgba(98,168,255,.95), rgba(255,204,102,.70));transition:width .25s ease}
+    .barTrack{
+      height:10px;border-radius:999px;border:1px solid var(--line);
+      background:rgba(255,255,255,.04);overflow:hidden;
+    }
+    .barFill{
+      height:100%;width:0%;
+      background:linear-gradient(90deg, rgba(98,168,255,.95), rgba(255,204,102,.70));
+      transition:width .25s ease;
+    }
     .barVal{font-size:12px;text-align:right}
 
-    /* ===== Mini panels ===== */
-    .mini{border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.03);padding:12px;margin-top:12px}
-    .miniHead{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-    .miniTitle{font-size:12px;color:var(--muted)}
-    .kpiGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
-    @media (max-width:560px){ .kpiGrid{grid-template-columns:1fr} }
-    .kpi{border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.02);padding:10px}
-    .kpi .kLbl{font-size:11px;color:var(--muted)}
-    .kpi .kVal{font-weight:900;font-size:14px;margin-top:4px}
-    .kpi .kSub{font-size:11px;color:var(--muted);margin-top:2px}
-
-    /* ===== Charts ===== */
-    .chartWrap{margin-top:10px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.02);padding:10px}
-    canvas{width:100%;height:260px;display:block}
-    .chartNote{margin-top:8px;font-size:11px;color:var(--muted);line-height:1.4}
+    /* ===== Schematic ===== */
+    #schem{ transition: transform .25s ease; }
   </style>
 </head>
 
@@ -135,24 +203,24 @@
   <div class="wrap">
     <div class="topbar">
       <div>
-        <p class="title">FuelSim — Demo A + Demo B</p>
+        <p class="title">Fuel Blend Calculator</p>
         <p class="subtitle">
-          Demo A: Blend + stoichiometry + emissions screening + sizing. Demo B: 0-D combustor map (T₄ vs ϕ) using simplified energy balance.
+          Two-component blending by <b>mass %</b>. Visual outputs: dials + columns, surrogate formula, stoichiometry, and sizing metrics.
         </p>
       </div>
       <div class="small">
         Basis: <b>mass%</b> (A + B = 100)
-        <div class="footer">Website-ready: user sees inputs/outputs only.</div>
+        <div class="footer">Screening tool: transparent assumptions, trend-focused.</div>
       </div>
     </div>
 
     <div class="grid">
-      <!-- ===================== INPUTS ===================== -->
+      <!-- Inputs -->
       <div class="card">
         <h3>Inputs</h3>
 
-        <label for="fuelSearch">Search fuels (key/name/category)</label>
-        <input id="fuelSearch" type="text" placeholder="Type to filter (e.g., HEFA, aromatic, ethanol, methane...)" />
+        <label for="fuelSearch">Search fuels (key or name)</label>
+        <input id="fuelSearch" type="text" placeholder="Type to filter dropdowns (e.g., HEFA, aromatic, ethanol, methane...)" />
 
         <div class="row" style="margin-top:8px">
           <div>
@@ -175,142 +243,179 @@
         <label for="blendName">Optional blend name</label>
         <input id="blendName" type="text" placeholder="Leave blank for auto-name" />
 
-        <div class="sep"></div>
-
-        <h3 style="margin-top:0">Operating point (for Demo A sizing + Demo B map)</h3>
-
-        <div class="row">
-          <div>
-            <label for="T3">Combustor inlet temperature T₃ (K)</label>
-            <input id="T3" type="number" value="800" step="10" min="250" />
+        <!-- Operating inputs -->
+        <div style="margin-top:14px; padding:12px; border:1px solid var(--line); border-radius:12px; background:rgba(255,255,255,.03)">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
+            <div style="font-weight:700; font-size:12px; color:#d8e4ff">Operating inputs (optional)</div>
+            <div class="small">Enable ϕ, λ, sizing</div>
           </div>
-          <div>
-            <label for="P3">Combustor inlet pressure P₃ (bar) <span class="small">(optional)</span></label>
-            <input id="P3" type="number" value="20" step="1" min="1" />
+
+          <div class="row" style="margin-top:10px">
+            <div>
+              <label for="afrActRange">Actual AFR (kg air / kg fuel)</label>
+              <div class="rangeBox">
+                <div class="rangeHead">
+                  <div class="small">AFRact</div>
+                  <div class="rangeVal mono" id="afrActVal">18.0</div>
+                </div>
+                <input id="afrActRange" type="range" min="5" max="35" step="0.1" value="18.0" />
+                <div class="rangeSub"><span>5</span><span>35</span></div>
+                <div class="rangeBtns">
+                  <button type="button" id="afrClear">Clear</button>
+                  <button type="button" id="afrStoich">Set = AFRst</button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label for="qthMWRange">Target thermal power Q̇ (MWₜₕ)</label>
+              <div class="rangeBox">
+                <div class="rangeHead">
+                  <div class="small">Q̇</div>
+                  <div class="rangeVal mono" id="qthMWVal">10.0</div>
+                </div>
+                <input id="qthMWRange" type="range" min="0" max="50" step="0.5" value="10.0" />
+                <div class="rangeSub"><span>0</span><span>50</span></div>
+                <div class="rangeBtns">
+                  <button type="button" id="qClear">Clear</button>
+                  <button type="button" id="q10">10 MW</button>
+                  <button type="button" id="q50">50 MW</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="note">
+            AFR slider controls φ and λ. If Q̇ &gt; 0, the tool computes ṁf and ṁa.
+            Use <b>Clear</b> to disable a slider’s effect.
           </div>
         </div>
 
-        <div class="row">
-          <div>
-            <label for="afrAct">Actual AFR (kg air/kg fuel) — for Demo A</label>
-            <input id="afrAct" type="number" value="18.0" step="0.1" min="0" />
-          </div>
-          <div>
-            <label for="Qth">Target thermal power Q̇ (MWₜₕ) — for Demo A sizing</label>
-            <input id="Qth" type="number" value="10.0" step="0.5" min="0" />
-          </div>
-        </div>
-
-        <div class="row">
-          <div>
-            <label for="etaComb">
-              <span class="tt" tabindex="0">
-                Combustion efficiency η (Demo B)
-                <span class="infoDot">i</span>
-                <span class="tip">
-                  <p class="tTitle">Combustor efficiency (screening)</p>
-                  <p class="tDef">Fraction of LHV converted into sensible enthalpy rise of (fuel+air) mixture.</p>
-                  <p class="tEq"><code>ΔT ≈ η·LHV / (c_p · (1+AFRact))</code></p>
-                </span>
-              </span>
-            </label>
-            <input id="etaComb" type="number" value="0.99" step="0.01" min="0.5" max="1.0" />
-          </div>
-          <div>
-            <label for="cpMix">
-              <span class="tt" tabindex="0">
-                Effective cₚ (kJ/kg-K) (Demo B)
-                <span class="infoDot">i</span>
-                <span class="tip">
-                  <p class="tTitle">Effective heat capacity (screening)</p>
-                  <p class="tDef">Single cₚ representing products/air mixture across T₃→T₄. Use for trend maps only.</p>
-                  <p class="tEq"><code>T4 ≈ T3 + (η·LHV·1000)/(c_p·(1+AFRact))</code></p>
-                </span>
-              </span>
-            </label>
-            <input id="cpMix" type="number" value="1.15" step="0.01" min="0.8" max="1.6" />
-          </div>
-        </div>
-
-        <div class="row">
-          <div>
-            <label for="phiMin">Map ϕ min (Demo B)</label>
-            <input id="phiMin" type="number" value="0.30" step="0.01" min="0.05" max="2.0" />
-          </div>
-          <div>
-            <label for="phiMax">Map ϕ max (Demo B)</label>
-            <input id="phiMax" type="number" value="1.60" step="0.01" min="0.05" max="3.0" />
-          </div>
-        </div>
-
-        <div class="row">
-          <div>
-            <label for="T4target">
-              <span class="tt" tabindex="0">
-                Target combustor exit temperature T₄, target (K) (Demo B)
-                <span class="infoDot">i</span>
-                <span class="tip">
-                  <p class="tTitle">Solve for ϕ or AFRact</p>
-                  <p class="tDef">We numerically find ϕ that hits T₄ target using the same screening energy balance.</p>
-                  <p class="tEq"><code>Find ϕ: T4(ϕ) − T4_target = 0</code></p>
-                </span>
-              </span>
-            </label>
-            <input id="T4target" type="number" value="1700" step="10" min="700" />
-          </div>
-          <div style="display:flex;align-items:end;gap:10px">
-            <button id="btnRecompute" class="primary" style="width:100%">Recompute</button>
-          </div>
+        <div class="note">
+          <b>Reference density field:</b> uses each fuel’s stated reference density (often 15°C for liquids; cryogenic for LCH₄).<br/>
+          Mixing uses specific-volume rule (engineering approximation).
         </div>
 
         <div class="warn" id="warnBox"></div>
-        <div class="ok" id="okBox"></div>
 
-        <div class="sep"></div>
-
-        <!-- ===== Edit/Add Fuel ===== -->
-        <h3 style="margin-top:0">Edit / Add Fuel</h3>
-        <div class="note" style="margin-top:0">Edits are stored locally in this browser (no server).</div>
-
-        <div class="row" style="margin-top:8px">
-          <div>
-            <label for="editKey">Fuel key to edit</label>
-            <select id="editKey"></select>
+        <!-- Edit/Add Fuel -->
+        <div style="margin-top:14px; padding:12px; border:1px solid var(--line); border-radius:12px; background:rgba(255,255,255,.03)">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
+            <div style="font-weight:700; font-size:12px; color:#d8e4ff">Edit / Add Fuel</div>
+            <div class="small">Saved locally in this browser</div>
           </div>
-          <div>
-            <label for="editName">Fuel name</label>
-            <input id="editName" type="text" placeholder="Display name" />
+
+          <div class="row" style="margin-top:10px">
+            <div>
+              <label for="editKey">Fuel key to edit</label>
+              <select id="editKey"></select>
+            </div>
+            <div>
+              <label for="editName">Fuel name</label>
+              <input id="editName" type="text" placeholder="Display name" />
+            </div>
           </div>
-        </div>
 
-        <div class="row">
-          <div><label for="editXC">x (C)</label><input id="editXC" type="number" step="0.001" /></div>
-          <div><label for="editYH">y (H)</label><input id="editYH" type="number" step="0.001" /></div>
-        </div>
-
-        <div class="row">
-          <div><label for="editZO">z (O)</label><input id="editZO" type="number" step="0.001" /></div>
-          <div><label for="editRho">Density ρ (kg/m³)</label><input id="editRho" type="number" step="0.1" /></div>
-        </div>
-
-        <div class="row">
-          <div><label for="editLHV">LHV (MJ/kg)</label><input id="editLHV" type="number" step="0.01" /></div>
-          <div style="display:flex;align-items:end;gap:10px">
-            <button id="btnSaveFuel" class="primary" style="width:100%">Save fuel</button>
+          <div class="row">
+            <div><label for="editXC">xC</label><input id="editXC" type="text" placeholder="e.g., 12" /></div>
+            <div><label for="editYH">yH</label><input id="editYH" type="text" placeholder="e.g., 26" /></div>
           </div>
-        </div>
 
-        <div class="row" style="margin-top:8px">
-          <button id="btnNewFuel" type="button">Add new fuel key</button>
-          <button id="btnResetLocal" type="button">Reset local edits</button>
-        </div>
+          <div class="row">
+            <div><label for="editZO">zO</label><input id="editZO" type="text" placeholder="e.g., 0" /></div>
+            <div><label for="editRho">Density ρ (kg/m³)</label><input id="editRho" type="text" placeholder="e.g., 780" /></div>
+          </div>
 
-        <div id="editMsg" class="note" style="margin-top:10px"></div>
+          <div class="row">
+            <div><label for="editLHV">LHV (MJ/kg)</label><input id="editLHV" type="text" placeholder="e.g., 43.3" /></div>
+            <div style="display:flex; align-items:end; gap:10px">
+              <button id="btnSaveFuel" class="primary" style="width:100%">Save fuel</button>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:8px">
+            <button id="btnNewFuel" type="button">Add new fuel key</button>
+            <button id="btnResetLocal" type="button">Reset local edits</button>
+          </div>
+
+          <div id="editMsg" class="note" style="margin-top:10px"></div>
+        </div>
       </div>
 
-      <!-- ===================== OUTPUTS ===================== -->
+      <!-- Outputs -->
       <div class="card">
-        <h3>Demo A — Blend + Screening</h3>
+        <h3>Outputs (Dials + Columns)</h3>
+
+        <!-- ===== System Schematic (NEW) ===== -->
+        <div class="barBox" style="margin-top:6px">
+          <div class="barTitleRow">
+            <div class="barTitle">System schematic (interactive)</div>
+            <div class="small">Arrow thickness ∝ flow</div>
+          </div>
+
+          <svg id="schem" viewBox="0 0 900 340" style="width:100%; height:auto; display:block">
+            <defs>
+              <linearGradient id="chGrad" x1="0" x2="1">
+                <stop offset="0" stop-color="rgba(255,255,255,.04)"/>
+                <stop offset="1" stop-color="rgba(255,255,255,.02)"/>
+              </linearGradient>
+              <marker id="arrowHead" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="rgba(231,238,252,.9)"></path>
+              </marker>
+            </defs>
+
+            <!-- Combustor -->
+            <rect x="340" y="70" width="240" height="200" rx="18" fill="url(#chGrad)" stroke="rgba(255,255,255,.12)"/>
+            <text x="460" y="110" text-anchor="middle" fill="rgba(231,238,252,.95)" font-size="16" font-weight="700">Combustor</text>
+            <text id="tPower" x="460" y="135" text-anchor="middle" fill="rgba(167,180,209,.95)" font-size="12">Q̇: —</text>
+
+            <!-- Mixer -->
+            <rect x="210" y="135" width="90" height="70" rx="14" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.12)"/>
+            <text x="255" y="176" text-anchor="middle" fill="rgba(231,238,252,.9)" font-size="12" font-weight="700">Mixer</text>
+
+            <!-- Fuel 1 -->
+            <line id="f1Line" x1="40" y1="140" x2="210" y2="150"
+                  stroke="rgba(98,168,255,.95)" stroke-width="8" stroke-linecap="round"
+                  marker-end="url(#arrowHead)"/>
+            <text x="40" y="120" fill="rgba(167,180,209,.95)" font-size="12">Fuel 1</text>
+            <text id="tF1" x="40" y="160" fill="rgba(231,238,252,.95)" font-size="12">—</text>
+
+            <!-- Fuel 2 -->
+            <line id="f2Line" x1="40" y1="220" x2="210" y2="190"
+                  stroke="rgba(255,204,102,.90)" stroke-width="8" stroke-linecap="round"
+                  marker-end="url(#arrowHead)"/>
+            <text x="40" y="245" fill="rgba(167,180,209,.95)" font-size="12">Fuel 2</text>
+            <text id="tF2" x="40" y="265" fill="rgba(231,238,252,.95)" font-size="12">—</text>
+
+            <!-- Mixer to combustor -->
+            <line id="mixLine" x1="300" y1="170" x2="340" y2="170"
+                  stroke="rgba(231,238,252,.85)" stroke-width="10" stroke-linecap="round"
+                  marker-end="url(#arrowHead)"/>
+            <text id="tBlend" x="305" y="155" fill="rgba(167,180,209,.95)" font-size="12">Blend</text>
+
+            <!-- Air -->
+            <line id="airLine" x1="460" y1="20" x2="460" y2="70"
+                  stroke="rgba(231,238,252,.85)" stroke-width="14" stroke-linecap="round"
+                  marker-end="url(#arrowHead)"/>
+            <text x="470" y="30" fill="rgba(167,180,209,.95)" font-size="12">Air</text>
+            <text id="tAir" x="470" y="50" fill="rgba(231,238,252,.95)" font-size="12">—</text>
+
+            <!-- Exhaust -->
+            <line id="exLine" x1="580" y1="170" x2="860" y2="170"
+                  stroke="rgba(231,238,252,.55)" stroke-width="12" stroke-linecap="round"
+                  marker-end="url(#arrowHead)"/>
+            <text x="865" y="155" text-anchor="end" fill="rgba(167,180,209,.95)" font-size="12">Exhaust</text>
+
+            <!-- Inside labels -->
+            <text id="tAFR" x="460" y="170" text-anchor="middle" fill="rgba(231,238,252,.9)" font-size="12">AFRact: —</text>
+            <text id="tPhi2" x="460" y="190" text-anchor="middle" fill="rgba(231,238,252,.9)" font-size="12">ϕ: —</text>
+            <text id="tMdot" x="460" y="215" text-anchor="middle" fill="rgba(167,180,209,.95)" font-size="12">ṁf: — | ṁa: —</text>
+          </svg>
+
+          <div class="note">
+            Fuel1/Fuel2 thickness tracks mass% ratio. Air thickness tracks AFRact (and ṁa if Q̇ enabled). Overall scale gently tracks Q̇.
+          </div>
+        </div>
 
         <div class="dialGrid">
           <!-- LHV -->
@@ -318,11 +423,11 @@
             <div class="dialTop">
               <div class="dialTitle">
                 <span class="tt" tabindex="0">
-                  LHV (MJ/kg)
+                  LHV
                   <span class="infoDot">i</span>
                   <span class="tip">
-                    <p class="tTitle">Lower Heating Value</p>
-                    <p class="tDef">Energy released per kg fuel excluding latent heat of water condensation.</p>
+                    <p class="tTitle">LHV (Lower Heating Value)</p>
+                    <p class="tDef">Energy released per unit mass of fuel excluding latent heat of water condensation.</p>
                     <p class="tEq"><code>LHV_blend = wA·LHV_A + wB·LHV_B</code></p>
                   </span>
                 </span>
@@ -343,11 +448,11 @@
             <div class="dialTop">
               <div class="dialTitle">
                 <span class="tt" tabindex="0">
-                  Density ρ (kg/m³)
+                  Density
                   <span class="infoDot">i</span>
                   <span class="tip">
-                    <p class="tTitle">Density mixing</p>
-                    <p class="tDef">Specific-volume mixing (approx): blend ρ is computed from mass fractions and component densities.</p>
+                    <p class="tTitle">Density (ρ)</p>
+                    <p class="tDef">Mass per unit volume at the stated reference condition (fuel property input).</p>
                     <p class="tEq"><code>1/ρ_blend = wA/ρ_A + wB/ρ_B</code></p>
                   </span>
                 </span>
@@ -368,11 +473,11 @@
             <div class="dialTop">
               <div class="dialTitle">
                 <span class="tt" tabindex="0">
-                  AFRst (kg/kg)
+                  AFRst
                   <span class="infoDot">i</span>
                   <span class="tip">
-                    <p class="tTitle">Stoichiometric AFR</p>
-                    <p class="tDef">Air–fuel ratio for complete combustion with no excess oxygen.</p>
+                    <p class="tTitle">Stoichiometric AFR (AFRst)</p>
+                    <p class="tDef">Air–fuel ratio for complete combustion with no excess O₂.</p>
                     <p class="tEq"><code>νO2 = x + y/4 − z/2; AFRst = (νO2·MW_O2)/(MW_fuel·Y_O2)</code></p>
                   </span>
                 </span>
@@ -393,11 +498,11 @@
             <div class="dialTop">
               <div class="dialTitle">
                 <span class="tt" tabindex="0">
-                  ϕ = AFRst/AFRact
+                  ϕ (needs AFRact)
                   <span class="infoDot">i</span>
                   <span class="tip">
-                    <p class="tTitle">Equivalence ratio</p>
-                    <p class="tDef">Richness: ϕ&gt;1 rich, ϕ&lt;1 lean.</p>
+                    <p class="tTitle">Equivalence ratio (ϕ)</p>
+                    <p class="tDef">Richness metric: ϕ&gt;1 rich, ϕ&lt;1 lean.</p>
                     <p class="tEq"><code>ϕ = AFRst / AFRact</code></p>
                   </span>
                 </span>
@@ -418,16 +523,16 @@
             <div class="dialTop">
               <div class="dialTitle">
                 <span class="tt" tabindex="0">
-                  CO₂ (g/kWhₜₕ)
+                  CO₂ per energy
                   <span class="infoDot">i</span>
                   <span class="tip">
                     <p class="tTitle">CO₂ per thermal energy</p>
-                    <p class="tDef">Ideal complete-combustion CO₂ per delivered thermal energy (LHV basis).</p>
+                    <p class="tDef">Complete-combustion CO₂ emissions per delivered thermal energy (LHV basis).</p>
                     <p class="tEq"><code>CO2_g/kWh = (CO2_kg/kg / LHV_MJ/kg) · 3.6 · 1000</code></p>
                   </span>
                 </span>
               </div>
-              <div class="dialValue"><span class="mono" id="gCO2kWh">—</span><span class="dialUnit">g/kWh</span></div>
+              <div class="dialValue"><span class="mono" id="gCO2kWh">—</span><span class="dialUnit">g/kWhₜₕ</span></div>
             </div>
             <div class="dialWrap">
               <svg class="dialSvg" viewBox="0 0 200 120">
@@ -437,37 +542,22 @@
             </div>
             <div class="dialMinMax"><span>150</span><span>350</span></div>
           </div>
-
-          <!-- T4 estimate dial (Demo B key) -->
-          <div class="dialCard">
-            <div class="dialTop">
-              <div class="dialTitle">
-                <span class="tt" tabindex="0">
-                  T₄ estimate (K) — Demo B
-                  <span class="infoDot">i</span>
-                  <span class="tip">
-                    <p class="tTitle">0-D combustor exit temperature (screening)</p>
-                    <p class="tDef">Simple energy balance using effective cₚ and η. Uses AFRact input.</p>
-                    <p class="tEq"><code>T4 ≈ T3 + (η·LHV·1000)/(c_p·(1+AFRact))</code></p>
-                  </span>
-                </span>
-              </div>
-              <div class="dialValue"><span class="mono" id="gT4">—</span><span class="dialUnit">K</span></div>
-            </div>
-            <div class="dialWrap">
-              <svg class="dialSvg" viewBox="0 0 200 120">
-                <path class="dialTrack" d="M 20 100 A 80 80 0 0 1 180 100"></path>
-                <path class="dialProg" id="dT4" d="M 20 100 A 80 80 0 0 1 180 100"></path>
-              </svg>
-            </div>
-            <div class="dialMinMax"><span>900</span><span>2100</span></div>
-          </div>
         </div>
 
         <div class="colChart" style="margin-top:12px">
           <div class="colTop">
-            <div class="colTitle">Key outputs (columns)</div>
-            <div class="small">scaled to typical ranges</div>
+            <div class="colTitle">
+              <span class="tt" tabindex="0">
+                Key outputs (columns)
+                <span class="infoDot">i</span>
+                <span class="tip">
+                  <p class="tTitle">Columns visualization</p>
+                  <p class="tDef">Each bar is scaled to a typical range for quick comparison; exact values shown beneath.</p>
+                  <p class="tEq"><code>Scaled = clamp((value−min)/(max−min))</code></p>
+                </span>
+              </span>
+            </div>
+            <div class="colValue"><span class="small">scaled to typical ranges</span></div>
           </div>
 
           <div class="cols">
@@ -475,12 +565,12 @@
               <div class="col"><div class="colFill" id="cLHVvol"></div></div>
               <div class="colLbl">
                 <span class="tt" tabindex="0">
-                  LHV (MJ/L)
+                  LHV MJ/L
                   <span class="infoDot">i</span>
                   <span class="tip">
                     <p class="tTitle">Volumetric LHV</p>
-                    <p class="tDef">Energy per unit volume; useful for tank sizing and volume-flow comparison.</p>
-                    <p class="tEq"><code>LHV_vol = LHV(MJ/kg) · ρ(kg/m³) / 1000</code></p>
+                    <p class="tDef">Energy per unit volume; useful for tank sizing and volume-flow comparisons.</p>
+                    <p class="tEq"><code>LHV_vol (MJ/L) = LHV(MJ/kg) · ρ(kg/m³) / 1000</code></p>
                   </span>
                 </span>
               </div>
@@ -491,11 +581,11 @@
               <div class="col"><div class="colFill" id="cCO2"></div></div>
               <div class="colLbl">
                 <span class="tt" tabindex="0">
-                  CO₂ (kg/kg)
+                  CO₂ kg/kg
                   <span class="infoDot">i</span>
                   <span class="tip">
-                    <p class="tTitle">CO₂ per kg fuel</p>
-                    <p class="tDef">Ideal complete-combustion CO₂ produced per kg fuel.</p>
+                    <p class="tTitle">CO₂ intensity (per kg fuel)</p>
+                    <p class="tDef">Complete-combustion CO₂ produced per kg fuel.</p>
                     <p class="tEq"><code>CO2_kg/kg = x · MW_CO2 / MW_fuel</code></p>
                   </span>
                 </span>
@@ -507,11 +597,11 @@
               <div class="col"><div class="colFill" id="cH2O"></div></div>
               <div class="colLbl">
                 <span class="tt" tabindex="0">
-                  H₂O (kg/kg)
+                  H₂O kg/kg
                   <span class="infoDot">i</span>
                   <span class="tip">
-                    <p class="tTitle">H₂O per kg fuel</p>
-                    <p class="tDef">Water formed from hydrogen under complete combustion.</p>
+                    <p class="tTitle">H₂O intensity (per kg fuel)</p>
+                    <p class="tDef">Water formed from hydrogen in fuel under complete combustion.</p>
                     <p class="tEq"><code>H2O_kg/kg = (y/2) · MW_H2O / MW_fuel</code></p>
                   </span>
                 </span>
@@ -523,11 +613,11 @@
               <div class="col"><div class="colFill" id="cQair"></div></div>
               <div class="colLbl">
                 <span class="tt" tabindex="0">
-                  q_air (MJ/kg air)
+                  q_air MJ/kg air
                   <span class="infoDot">i</span>
                   <span class="tip">
-                    <p class="tTitle">Heat per kg air</p>
-                    <p class="tDef">Thermal energy per kg air at the chosen AFRact.</p>
+                    <p class="tTitle">Heat per kg air (screening)</p>
+                    <p class="tDef">Thermal energy released per kg of air at the chosen AFRact.</p>
                     <p class="tEq"><code>q_air = LHV / AFRact</code></p>
                   </span>
                 </span>
@@ -539,113 +629,132 @@
 
         <div class="barBox">
           <div class="barTitleRow">
-            <div class="barTitle">Computed summary (horizontal bars)</div>
+            <div class="barTitle">
+              <span class="tt" tabindex="0">
+                Computed summary (horizontal bars)
+                <span class="infoDot">i</span>
+                <span class="tip">
+                  <p class="tTitle">Summary bars</p>
+                  <p class="tDef">These bars show computed quantities (stoichiometry, λ, and mass-flow sizing) scaled to typical ranges.</p>
+                  <p class="tEq"><code>Scaled = clamp((value−min)/(max−min))</code></p>
+                </span>
+              </span>
+            </div>
             <div class="small">scaled to typical ranges</div>
           </div>
 
           <div class="barRow">
-            <div class="barLbl">Surrogate formula</div>
+            <div class="barLbl">
+              <span class="tt" tabindex="0">
+                Formula
+                <span class="infoDot">i</span>
+                <span class="tip">
+                  <p class="tTitle">Surrogate formula</p>
+                  <p class="tDef">Mass-weighted average surrogate: CxHyOz.</p>
+                  <p class="tEq"><code>x = wA·xA + wB·xB (same for y,z)</code></p>
+                </span>
+              </span>
+            </div>
             <div class="barText mono" id="tFormula">—</div>
             <div class="barVal mono"></div>
           </div>
 
           <div class="barRow">
-            <div class="barLbl">MW (g/mol)</div>
+            <div class="barLbl">
+              <span class="tt" tabindex="0">
+                MW (g/mol)
+                <span class="infoDot">i</span>
+                <span class="tip">
+                  <p class="tTitle">Molecular weight of surrogate fuel</p>
+                  <p class="tDef">Computed from CxHyOz composition.</p>
+                  <p class="tEq"><code>MW_fuel = x·MW_C + y·MW_H + z·MW_O</code></p>
+                </span>
+              </span>
+            </div>
             <div class="barTrack"><div class="barFill" id="hbMW"></div></div>
             <div class="barVal mono" id="tMW">—</div>
           </div>
 
           <div class="barRow">
-            <div class="barLbl">νO₂ (mol/mol)</div>
+            <div class="barLbl">
+              <span class="tt" tabindex="0">
+                νO₂ (mol/mol)
+                <span class="infoDot">i</span>
+                <span class="tip">
+                  <p class="tTitle">Stoichiometric O₂ requirement</p>
+                  <p class="tDef">Moles of O₂ needed per mole of fuel for complete combustion.</p>
+                  <p class="tEq"><code>νO2 = x + y/4 − z/2</code></p>
+                </span>
+              </span>
+            </div>
             <div class="barTrack"><div class="barFill" id="hbNuO2"></div></div>
             <div class="barVal mono" id="tNuO2">—</div>
           </div>
 
           <div class="barRow">
-            <div class="barLbl">λ (—)</div>
+            <div class="barLbl">
+              <span class="tt" tabindex="0">
+                λ (—)
+                <span class="infoDot">i</span>
+                <span class="tip">
+                  <p class="tTitle">Excess-air ratio (λ)</p>
+                  <p class="tDef">λ&gt;1 lean (excess air), λ&lt;1 rich.</p>
+                  <p class="tEq"><code>λ = AFRact / AFRst = 1/ϕ</code></p>
+                </span>
+              </span>
+            </div>
             <div class="barTrack"><div class="barFill" id="hbLambda"></div></div>
             <div class="barVal mono" id="tLambda">—</div>
           </div>
 
           <div class="barRow">
-            <div class="barLbl">ṁf (kg/s) @ Q̇</div>
+            <div class="barLbl">
+              <span class="tt" tabindex="0">
+                ṁf (kg/s)
+                <span class="infoDot">i</span>
+                <span class="tip">
+                  <p class="tTitle">Fuel mass flow rate</p>
+                  <p class="tDef">Fuel needed to deliver target thermal power Q̇ (LHV basis).</p>
+                  <p class="tEq"><code>ṁf = Q̇(MJ/s) / LHV(MJ/kg)</code></p>
+                </span>
+              </span>
+            </div>
             <div class="barTrack"><div class="barFill" id="hbMdotF"></div></div>
             <div class="barVal mono" id="tMdotF">—</div>
           </div>
 
           <div class="barRow">
-            <div class="barLbl">ṁa (kg/s) @ Q̇</div>
+            <div class="barLbl">
+              <span class="tt" tabindex="0">
+                ṁa (kg/s)
+                <span class="infoDot">i</span>
+                <span class="tip">
+                  <p class="tTitle">Air mass flow rate</p>
+                  <p class="tDef">Air required at selected AFRact.</p>
+                  <p class="tEq"><code>ṁa = AFRact · ṁf</code></p>
+                </span>
+              </span>
+            </div>
             <div class="barTrack"><div class="barFill" id="hbMdotA"></div></div>
             <div class="barVal mono" id="tMdotA">—</div>
           </div>
         </div>
 
-        <!-- ===================== DEMO B ===================== -->
-        <div class="mini">
-          <div class="miniHead">
-            <div class="miniTitle">
-              <span class="tt" tabindex="0">
-                Demo B — 0-D Combustor Map (screening)
-                <span class="infoDot">i</span>
-                <span class="tip">
-                  <p class="tTitle">What this map is</p>
-                  <p class="tDef">A simplified energy-balance map for T₄ vs ϕ. Good for trends and interactive demos; not a detailed combustor model.</p>
-                  <p class="tEq"><code>T4(ϕ) ≈ T3 + (η·LHV·1000)/(c_p·(1 + AFRst/ϕ))</code></p>
-                </span>
-              </span>
-            </div>
-            <div class="small">plots update live</div>
-          </div>
-
-          <div class="kpiGrid">
-            <div class="kpi">
-              <div class="kLbl">ϕ to hit T₄,target</div>
-              <div class="kVal mono" id="kPhiTarget">—</div>
-              <div class="kSub">bisection solve within map range</div>
-            </div>
-            <div class="kpi">
-              <div class="kLbl">AFRact at that ϕ</div>
-              <div class="kVal mono" id="kAFRtarget">—</div>
-              <div class="kSub">AFRact = AFRst / ϕ</div>
-            </div>
-            <div class="kpi">
-              <div class="kLbl">T₄ at current AFRact</div>
-              <div class="kVal mono" id="kT4cur">—</div>
-              <div class="kSub">uses your AFRact input</div>
-            </div>
-          </div>
-
-          <div class="chartWrap">
-            <canvas id="chartT4"></canvas>
-            <div class="chartNote">
-              The line is T₄(ϕ). The vertical marker shows ϕ that meets T₄,target (if solvable within ϕ range).
-              The horizontal marker shows T₄,target.
-            </div>
-          </div>
-
-          <div class="chartWrap">
-            <canvas id="chartAFR"></canvas>
-            <div class="chartNote">
-              AFRact(ϕ) = AFRst/ϕ. Useful to see how air demand changes across the map.
-            </div>
-          </div>
-
-          <div class="note">
-            Demo B assumptions (screening): constant effective cₚ, no dissociation, no pressure dependence, no heat loss, complete combustion.
-            Use this for interactive demonstrations and trend intuition only.
-          </div>
+        <div class="note">
+          Definitions (screening): νO₂ = x + y/4 − z/2; AFRst uses Y<sub>O2</sub>=0.232 (mass fraction).<br/>
+          CO₂/kg fuel = x·MW(CO₂)/MW(fuel); H₂O/kg fuel = (y/2)·MW(H₂O)/MW(fuel).<br/>
+          ϕ = AFRst/AFRact, λ = 1/ϕ, q<sub>air</sub>=LHV/AFRact. Q̇ in MW equals MJ/s.
         </div>
       </div>
     </div>
 
     <div class="footer">
-      <span class="mono">Tip for 123site:</span> Put this as <b>index.html</b>. Users only see the inputs/outputs in the page.
+      <span class="mono">Note:</span> This tool is intended for engineering screening and relative trends. It does not replace certification testing.
     </div>
   </div>
 
 <script>
-  /* ===================== CONSTANTS ===================== */
-  const Y_O2_AIR = 0.232; // mass fraction
+  const Y_O2_AIR = 0.232;
   const MW = { C: 12.011, H: 1.008, O: 15.999, O2: 31.998, CO2: 44.0095, H2O: 18.01528 };
 
   const CAT_ORDER = [
@@ -660,7 +769,6 @@
     "User (local)"
   ];
 
-  /* ===================== DEFAULT FUEL LIBRARY ===================== */
   const DEFAULT_FUELS = {
     JetA:        { cat:"Conventional Jet", name:"Jet-A (rep)",                  xC:11.40, yH:22.10, zO:0.00, rho:803.0, LHV:43.06 },
     JetA_light:  { cat:"Conventional Jet", name:"Jet-A (lighter cut)",          xC:10.80, yH:21.60, zO:0.00, rho:790.0, LHV:43.20 },
@@ -670,7 +778,7 @@
 
     HEFA:        { cat:"SAF (Paraffinic)", name:"HEFA-SPK (rep)",               xC:11.60, yH:25.20, zO:0.00, rho:752.0, LHV:44.18 },
     FT:          { cat:"SAF (Paraffinic)", name:"FT-SPK (rep)",                 xC:12.00, yH:26.00, zO:0.00, rho:760.0, LHV:43.50 },
-    ATJ:         { cat:"SAF (Paraffinic)", name:"ATJ-SPK (rep)",                xC:11.30, yH:24.80, zO:0.00, rho:760.0, LHV:43.80 },
+    ATJ:         { cat:"SAF (Paraffinic)", name:"ATJ-SPK (rep)",                xC:11.30, saying:24.80, zO:0.00, rho:760.0, LHV:43.80 },  /* will be fixed below */
     SIP:         { cat:"SAF (Paraffinic)", name:"SIP (iso-paraffinic)",         xC:11.00, yH:24.00, zO:0.00, rho:750.0, LHV:44.00 },
     HFS_SPK:     { cat:"SAF (Paraffinic)", name:"HFS (hydroprocessed sugars)",  xC:11.20, yH:24.40, zO:0.00, rho:748.0, LHV:44.10 },
 
@@ -697,122 +805,84 @@
     EtOH:         { cat:"Oxygenates (validation)", name:"Ethanol (C2H6O)",             xC: 2.00, yH: 6.00, zO:1.00, rho:789.0, LHV:26.80 },
     iPrOH:        { cat:"Oxygenates (validation)", name:"Isopropanol (C3H8O)",         xC: 3.00, yH: 8.00, zO:1.00, rho:786.0, LHV:30.00 },
     BuOH:         { cat:"Oxygenates (validation)", name:"n-Butanol (C4H10O)",          xC: 4.00, yH:10.00, zO:1.00, rho:810.0, LHV:33.10 },
+    MTBE:         { cat:"Oxygenates (validation)", name:"MTBE (C5H12O)",               xC: 5.00, yH:12.00, zO:1.00, rho:740.0, LHV:35.00 },
 
+    Gasoline:     { cat:"Diesel/Gasoline (screening)", name:"Gasoline surrogate",      xC: 8.00, yH:18.00, zO:0.00, rho:740.0, LHV:43.50 },
     Diesel:       { cat:"Diesel/Gasoline (screening)", name:"Diesel surrogate",        xC:14.00, yH:30.00, zO:0.00, rho:835.0, LHV:42.70 },
 
     CH4:          { cat:"Gases (stoichiometry checks)", name:"Methane (gas, ref)",     xC: 1.00, yH: 4.00, zO:0.00, rho:  0.656, LHV:50.00 },
     LCH4:         { cat:"Gases (stoichiometry checks)", name:"Liquid methane (cryogenic)", xC:1.00, yH:4.00, zO:0.00, rho:420.0, LHV:50.00 },
+    C3H8:         { cat:"Gases (stoichiometry checks)", name:"Propane (gas, ref)",     xC: 3.00, yH: 8.00, zO:0.00, rho:  1.88,  LHV:46.40 },
     H2:           { cat:"Gases (stoichiometry checks)", name:"Hydrogen (gas, ref)",    xC: 0.00, yH: 2.00, zO:0.00, rho:  0.084, LHV:120.0 }
   };
 
-  /* ===================== LOAD + MERGE LOCAL EDITS ===================== */
+  // Quick fix for a typo if you copy/pasted earlier:
+  if (DEFAULT_FUELS.ATJ && DEFAULT_FUELS.ATJ.saying !== undefined) {
+    DEFAULT_FUELS.ATJ.yH = DEFAULT_FUELS.ATJ.saying;
+    delete DEFAULT_FUELS.ATJ.saying;
+  }
+
   const FUELS = JSON.parse(JSON.stringify(DEFAULT_FUELS));
   try {
-    const saved = localStorage.getItem("fuelsim_fuels_v2");
+    const saved = localStorage.getItem("fuelsim_fuels");
     if (saved) {
       const obj = JSON.parse(saved);
       for (const k of Object.keys(obj)) FUELS[k] = obj[k];
     }
   } catch(e) {}
 
-  function saveLocalFuels(){ try{ localStorage.setItem("fuelsim_fuels_v2", JSON.stringify(FUELS)); }catch(e){} }
+  function saveLocalFuels(){ try { localStorage.setItem("fuelsim_fuels", JSON.stringify(FUELS)); } catch(e) {} }
   function resetLocalFuels(){
-    try{ localStorage.removeItem("fuelsim_fuels_v2"); }catch(e){}
+    try { localStorage.removeItem("fuelsim_fuels"); } catch(e) {}
     for (const k of Object.keys(FUELS)) delete FUELS[k];
     for (const k of Object.keys(DEFAULT_FUELS)) FUELS[k] = JSON.parse(JSON.stringify(DEFAULT_FUELS[k]));
   }
 
-  /* ===================== CORE CHEM FUNCTIONS ===================== */
-  function mwFuel(f){ return f.xC*MW.C + f.yH*MW.H + f.zO*MW.O; }
-  function nuO2Stoich(f){ return f.xC + f.yH/4.0 - f.zO/2.0; }
-  function afrStoichMass(f){
+  function mwFuel(f) { return f.xC*MW.C + f.yH*MW.H + f.zO*MW.O; }
+  function nuO2Stoich(f) { return f.xC + f.yH/4.0 - f.zO/2.0; }
+  function afrStoichMass(f) {
     const nu = nuO2Stoich(f);
-    if (nu <= 0) throw new Error("Non-physical νO₂ ≤ 0.");
+    if (nu <= 0) throw new Error("Non-physical stoichiometric O2 requirement.");
     const mwf = mwFuel(f);
-    if (mwf <= 0) throw new Error("Non-physical MW_fuel ≤ 0.");
-    return (nu*MW.O2) / (mwf * Y_O2_AIR);
+    if (mwf <= 0) throw new Error("Non-physical fuel molecular weight.");
+    const mO2 = nu * MW.O2;
+    return mO2 / (mwf * Y_O2_AIR);
   }
   function co2IntensityKgPerKg(f){
     const mwf = mwFuel(f);
-    if (mwf <= 0) throw new Error("Non-physical MW_fuel ≤ 0.");
+    if (mwf <= 0) throw new Error("Non-physical fuel molecular weight.");
     return (f.xC * MW.CO2) / mwf;
   }
   function h2oIntensityKgPerKg(f){
     const mwf = mwFuel(f);
-    if (mwf <= 0) throw new Error("Non-physical MW_fuel ≤ 0.");
+    if (mwf <= 0) throw new Error("Non-physical fuel molecular weight.");
     return ((f.yH/2.0) * MW.H2O) / mwf;
   }
   function co2PerKWhth_g(f){
     const co2kgkg = co2IntensityKgPerKg(f);
-    if (f.LHV <= 0) throw new Error("Non-physical LHV ≤ 0.");
-    return (co2kgkg / f.LHV) * 3.6 * 1000.0;
+    if (f.LHV <= 0) throw new Error("Non-physical LHV.");
+    const kg_per_MJ = co2kgkg / f.LHV;
+    return kg_per_MJ * 3.6 * 1000.0;
   }
-  function blendMass2(fA,fB,wA){
-    const wB = 1-wA;
+
+  function blendMass2(fA, fB, wA) {
+    const wB = 1 - wA;
     const LHV = wA*fA.LHV + wB*fB.LHV;
-    const invRho = (wA/fA.rho) + (wB/fB.rho);
-    const rho = 1/invRho;
+    const invRho = (wA / fA.rho) + (wB / fB.rho);
+    const rho = 1 / invRho;
     const xC = wA*fA.xC + wB*fB.xC;
     const yH = wA*fA.yH + wB*fB.yH;
     const zO = wA*fA.zO + wB*fB.zO;
-    return { name:"", xC,yH,zO,rho,LHV };
+    return { name:"", xC, yH, zO, rho, LHV };
   }
 
-  /* ===================== DEMO B: 0-D COMBUSTOR SCREENING MODEL ===================== */
-  // T4(phi) screening:
-  // AFRact = AFRst / phi
-  // T4 = T3 + (eta * LHV*1000) / (cp_kJkgK * (1 + AFRact))
-  function T4_from_phi({T3, LHV_MJkg, AFRst, phi, eta, cp_kJkgK}){
-    const eps = 1e-9;
-    const p = Math.max(phi, eps);
-    const AFRact = AFRst / p;
-    const dT = (eta * LHV_MJkg * 1000.0) / (cp_kJkgK * (1.0 + AFRact));
-    return { T4: T3 + dT, AFRact };
-  }
-  function T4_from_AFRact({T3,LHV_MJkg,AFRact,eta,cp_kJkgK}){
-    const eps = 1e-9;
-    const A = Math.max(AFRact, eps);
-    const dT = (eta * LHV_MJkg * 1000.0) / (cp_kJkgK * (1.0 + A));
-    return T3 + dT;
-  }
-
-  // Solve phi to hit T4target within [phiMin,phiMax]
-  function solvePhiForT4({T3,LHV_MJkg,AFRst,eta,cp_kJkgK,phiMin,phiMax,T4target}){
-    const f = (phi) => T4_from_phi({T3,LHV_MJkg,AFRst,phi,eta,cp_kJkgK}).T4 - T4target;
-
-    let a = phiMin, b = phiMax;
-    let fa = f(a), fb = f(b);
-    if (!Number.isFinite(fa) || !Number.isFinite(fb)) return { ok:false, phi:NaN, AFRact:NaN };
-    if (fa === 0) {
-      const out = T4_from_phi({T3,LHV_MJkg,AFRst,phi:a,eta,cp_kJkgK});
-      return { ok:true, phi:a, AFRact:out.AFRact };
-    }
-    if (fb === 0) {
-      const out = T4_from_phi({T3,LHV_MJkg,AFRst,phi:b,eta,cp_kJkgK});
-      return { ok:true, phi:b, AFRact:out.AFRact };
-    }
-    if (fa*fb > 0) return { ok:false, phi:NaN, AFRact:NaN };
-
-    // bisection
-    for (let i=0;i<70;i++){
-      const m = 0.5*(a+b);
-      const fm = f(m);
-      if (!Number.isFinite(fm)) break;
-      if (Math.abs(fm) < 1e-6) {
-        const out = T4_from_phi({T3,LHV_MJkg,AFRst,phi:m,eta,cp_kJkgK});
-        return { ok:true, phi:m, AFRact:out.AFRact };
-      }
-      if (fa*fm <= 0){ b=m; fb=fm; }
-      else { a=m; fa=fm; }
-    }
-    const m = 0.5*(a+b);
-    const out = T4_from_phi({T3,LHV_MJkg,AFRst,phi:m,eta,cp_kJkgK});
-    return { ok:true, phi:m, AFRact:out.AFRact };
-  }
-
-  /* ===================== UI HELPERS ===================== */
   function clamp01(x){ return Math.max(0, Math.min(1, x)); }
-  function fmt(x,n=3){ return Number(x).toFixed(n); }
+  function fmt(x, n=3){ return Number(x).toFixed(n); }
+  function showWarn(el, msg){
+    if (!msg){ el.style.display="none"; el.textContent=""; return; }
+    el.style.display="block"; el.textContent = msg;
+  }
+
   function setDial(pathEl, value, vmin, vmax){
     if (!pathEl) return;
     if (!Number.isFinite(value)) { pathEl.style.strokeDasharray = "0 9999"; return; }
@@ -820,24 +890,101 @@
     const arc = 251;
     pathEl.style.strokeDasharray = `${(p*arc).toFixed(1)} 9999`;
   }
-  function setCol(el,value,vmin,vmax){
+
+  function setCol(el, value, vmin, vmax){
     if (!el) return;
-    if (!Number.isFinite(value)) { el.style.height="0%"; return; }
-    const p = clamp01((value-vmin)/(vmax-vmin));
-    el.style.height = (p*100).toFixed(1)+"%";
-  }
-  function setHBar(el,value,vmin,vmax){
-    if (!el) return;
-    if (!Number.isFinite(value)) { el.style.width="0%"; return; }
-    const p = clamp01((value-vmin)/(vmax-vmin));
-    el.style.width = (p*100).toFixed(1)+"%";
-  }
-  function showBox(el,msg){
-    if (!msg){ el.style.display="none"; el.textContent=""; return; }
-    el.style.display="block"; el.textContent = msg;
+    if (!Number.isFinite(value)) { el.style.height = "0%"; return; }
+    const p = clamp01((value - vmin) / (vmax - vmin));
+    el.style.height = (p*100).toFixed(1) + "%";
   }
 
-  /* ===================== DOM ===================== */
+  function setHBar(el, value, vmin, vmax){
+    if (!el) return;
+    if (!Number.isFinite(value)) { el.style.width = "0%"; return; }
+    const p = clamp01((value - vmin) / (vmax - vmin));
+    el.style.width = (p*100).toFixed(1) + "%";
+  }
+
+  /* ===== NEW: Schematic update ===== */
+  function updateSchematic({wA, wB, afr_act, afr_st, phi, qMW, mdot_f, mdot_a, fuelAKey, fuelBKey}) {
+    const f1 = document.getElementById("f1Line");
+    const f2 = document.getElementById("f2Line");
+    const mix = document.getElementById("mixLine");
+    const air = document.getElementById("airLine");
+    const ex  = document.getElementById("exLine");
+
+    const tF1 = document.getElementById("tF1");
+    const tF2 = document.getElementById("tF2");
+    const tAir= document.getElementById("tAir");
+    const tAFR= document.getElementById("tAFR");
+    const tPhi= document.getElementById("tPhi2");
+    const tPow= document.getElementById("tPower");
+    const tMd = document.getElementById("tMdot");
+    const tBlend = document.getElementById("tBlend");
+
+    const baseFuel = 6;
+    const spanFuel = 12;
+    const w1 = baseFuel + spanFuel * wA;
+    const w2 = baseFuel + spanFuel * wB;
+
+    let wMix = (w1 + w2) * 0.6;
+
+    let wAir = 10;
+    if (Number.isFinite(afr_act) && afr_act > 0) {
+      const p = Math.max(0, Math.min(1, (afr_act - 5) / (35 - 5)));
+      wAir = 8 + 18 * p;
+    }
+
+    if (Number.isFinite(mdot_f) && Number.isFinite(mdot_a) && mdot_f > 0 && mdot_a > 0) {
+      const nf = Math.max(0, Math.min(1, mdot_f / 1.0));
+      const na = Math.max(0, Math.min(1, mdot_a / 25.0));
+      wMix = 8 + 18 * nf;
+      wAir = 10 + 22 * na;
+    }
+
+    const wEx = Math.max(10, Math.min(34, 0.55*wAir + 0.35*wMix));
+
+    f1.setAttribute("stroke-width", w1.toFixed(1));
+    f2.setAttribute("stroke-width", w2.toFixed(1));
+    mix.setAttribute("stroke-width", wMix.toFixed(1));
+    air.setAttribute("stroke-width", wAir.toFixed(1));
+    ex.setAttribute("stroke-width",  wEx.toFixed(1));
+
+    tF1.textContent = `${fuelAKey}: ${(wA*100).toFixed(0)}%`;
+    tF2.textContent = `${fuelBKey}: ${(wB*100).toFixed(0)}%`;
+
+    if (Number.isFinite(afr_act) && afr_act > 0) {
+      tAFR.textContent = `AFRact: ${afr_act.toFixed(2)} (AFRst: ${afr_st.toFixed(2)})`;
+      tAir.textContent = `λ = ${(afr_act/afr_st).toFixed(3)}`;
+    } else {
+      tAFR.textContent = `AFRact: —`;
+      tAir.textContent = `—`;
+    }
+
+    tPhi.textContent = Number.isFinite(phi) ? `ϕ: ${phi.toFixed(3)}` : `ϕ: —`;
+
+    tPow.textContent = (Number.isFinite(qMW) && qMW > 0) ? `Q̇: ${qMW.toFixed(1)} MWth` : `Q̇: —`;
+
+    if (Number.isFinite(mdot_f) && Number.isFinite(mdot_a) && mdot_f > 0 && mdot_a > 0) {
+      tMd.textContent = `ṁf: ${mdot_f.toFixed(4)} kg/s | ṁa: ${mdot_a.toFixed(3)} kg/s`;
+    } else {
+      tMd.textContent = `ṁf: — | ṁa: —`;
+    }
+
+    tBlend.textContent = `Blend`;
+
+    const svg = document.getElementById("schem");
+    if (svg) {
+      let s = 1.0;
+      if (Number.isFinite(qMW) && qMW > 0) {
+        const p = Math.max(0, Math.min(1, qMW / 50));
+        s = 1.0 + 0.10*p;
+      }
+      svg.style.transformOrigin = "center";
+      svg.style.transform = `scale(${s.toFixed(3)})`;
+    }
+  }
+
   const elFuelSearch = document.getElementById("fuelSearch");
   const elFuelA = document.getElementById("fuelA");
   const elFuelB = document.getElementById("fuelB");
@@ -845,67 +992,51 @@
   const elPillA = document.getElementById("pillA");
   const elPillB = document.getElementById("pillB");
   const elName  = document.getElementById("blendName");
-
-  const elT3 = document.getElementById("T3");
-  const elP3 = document.getElementById("P3"); // currently not used in equations (kept for roadmap)
-  const elAfrAct = document.getElementById("afrAct");
-  const elQth = document.getElementById("Qth");
-  const elEta = document.getElementById("etaComb");
-  const elCp  = document.getElementById("cpMix");
-  const elPhiMin = document.getElementById("phiMin");
-  const elPhiMax = document.getElementById("phiMax");
-  const elT4target = document.getElementById("T4target");
-
   const warnBox = document.getElementById("warnBox");
-  const okBox = document.getElementById("okBox");
 
-  // dials
+  const elAfrActRange = document.getElementById("afrActRange");
+  const elAfrActVal   = document.getElementById("afrActVal");
+  const elQthMWRange  = document.getElementById("qthMWRange");
+  const elQthMWVal    = document.getElementById("qthMWVal");
+
+  let afrEnabled = true;
+  let qEnabled = true;
+
   const gLHV = document.getElementById("gLHV");
   const gRho = document.getElementById("gRho");
   const gAFRst = document.getElementById("gAFRst");
   const gPhi = document.getElementById("gPhi");
   const gCO2kWh = document.getElementById("gCO2kWh");
-  const gT4 = document.getElementById("gT4");
+
   const dLHV = document.getElementById("dLHV");
   const dRho = document.getElementById("dRho");
   const dAFR = document.getElementById("dAFR");
   const dPhi = document.getElementById("dPhi");
   const dCO2kWh = document.getElementById("dCO2kWh");
-  const dT4 = document.getElementById("dT4");
 
-  // columns
   const cLHVvol = document.getElementById("cLHVvol");
   const cCO2 = document.getElementById("cCO2");
   const cH2O = document.getElementById("cH2O");
   const cQair = document.getElementById("cQair");
+
   const bLHVvol = document.getElementById("bLHVvol");
   const bCO2kgkg = document.getElementById("bCO2kgkg");
   const bH2Okgkg = document.getElementById("bH2Okgkg");
   const bQair = document.getElementById("bQair");
 
-  // bars
   const tFormula = document.getElementById("tFormula");
   const tMW = document.getElementById("tMW");
   const tNuO2 = document.getElementById("tNuO2");
   const tLambda = document.getElementById("tLambda");
   const tMdotF = document.getElementById("tMdotF");
   const tMdotA = document.getElementById("tMdotA");
+
   const hbMW = document.getElementById("hbMW");
   const hbNuO2 = document.getElementById("hbNuO2");
   const hbLambda = document.getElementById("hbLambda");
   const hbMdotF = document.getElementById("hbMdotF");
   const hbMdotA = document.getElementById("hbMdotA");
 
-  // demo B KPIs
-  const kPhiTarget = document.getElementById("kPhiTarget");
-  const kAFRtarget = document.getElementById("kAFRtarget");
-  const kT4cur = document.getElementById("kT4cur");
-
-  // charts
-  const cvT4 = document.getElementById("chartT4");
-  const cvAFR = document.getElementById("chartAFR");
-
-  /* ===================== EDITOR ===================== */
   const elEditKey  = document.getElementById("editKey");
   const elEditName = document.getElementById("editName");
   const elEditXC   = document.getElementById("editXC");
@@ -917,30 +1048,33 @@
 
   function fuelKeys(){ return Object.keys(FUELS).sort(); }
   function getCategory(k){ return FUELS[k]?.cat || "User (local)"; }
-  function matchesFilter(k,filter){
+  function matchesFilter(k, filter){
     if (!filter) return true;
     const f = FUELS[k];
     const t = filter.toLowerCase().trim();
-    const hay = (k+" "+(f?.name||"")+" "+(f?.cat||"")).toLowerCase();
+    const hay = (k + " " + (f?.name||"") + " " + (f?.cat||"")).toLowerCase();
     return hay.includes(t);
   }
+
   function rebuildDropdownGrouped(sel, keepValue, filterText){
     const prev = keepValue ?? sel.value;
     sel.innerHTML = "";
+
     const keys = fuelKeys().filter(k => matchesFilter(k, filterText));
     const byCat = new Map();
-    for (const k of keys){
+    for (const k of keys) {
       const cat = getCategory(k);
       if (!byCat.has(cat)) byCat.set(cat, []);
       byCat.get(cat).push(k);
     }
+
     let added = 0;
-    for (const cat of CAT_ORDER){
+    for (const cat of CAT_ORDER) {
       const arr = byCat.get(cat);
-      if (!arr || arr.length===0) continue;
+      if (!arr || arr.length === 0) continue;
       const og = document.createElement("optgroup");
       og.label = cat;
-      for (const k of arr){
+      for (const k of arr) {
         const f = FUELS[k];
         const opt = document.createElement("option");
         opt.value = k;
@@ -950,11 +1084,11 @@
       }
       sel.appendChild(og);
     }
-    for (const [cat,arr] of byCat.entries()){
+    for (const [cat, arr] of byCat.entries()) {
       if (CAT_ORDER.includes(cat)) continue;
       const og = document.createElement("optgroup");
       og.label = cat;
-      for (const k of arr){
+      for (const k of arr) {
         const f = FUELS[k];
         const opt = document.createElement("option");
         opt.value = k;
@@ -964,17 +1098,24 @@
       }
       sel.appendChild(og);
     }
-    if (added===0){
+
+    if (added === 0) {
       const opt = document.createElement("option");
-      opt.value=""; opt.textContent="No matches"; opt.disabled=true; opt.selected=true;
+      opt.value = "";
+      opt.textContent = "No matches";
+      opt.disabled = true;
+      opt.selected = true;
       sel.appendChild(opt);
       return;
     }
+
     if (prev && FUELS[prev] && keys.includes(prev)) sel.value = prev;
     else sel.value = keys[0];
   }
+
   function loadEditorFromKey(k){
-    const f = FUELS[k]; if (!f) return;
+    const f = FUELS[k];
+    if (!f) return;
     elEditName.value = f.name ?? k;
     elEditXC.value = f.xC;
     elEditYH.value = f.yH;
@@ -982,6 +1123,7 @@
     elEditRho.value = f.rho;
     elEditLHV.value = f.LHV;
   }
+
   function refreshAllDropdowns(){
     const filterText = elFuelSearch.value || "";
     const a = elFuelA.value || "JetA";
@@ -992,244 +1134,145 @@
     rebuildDropdownGrouped(elFuelB, b, filterText);
     rebuildDropdownGrouped(elEditKey, e, filterText);
 
-    if (elFuelA.value && elFuelB.value && elFuelA.value === elFuelB.value){
+    if (elFuelA.value && elFuelB.value && elFuelA.value === elFuelB.value) {
       const keys = fuelKeys().filter(k => matchesFilter(k, filterText));
       const alt = keys.find(x => x !== elFuelA.value);
       if (alt) elFuelB.value = alt;
     }
+
     if (elEditKey.value) loadEditorFromKey(elEditKey.value);
     update();
   }
 
   document.getElementById("btnSaveFuel").addEventListener("click", () => {
     const k = (elEditKey.value || "").trim();
-    if (!k){ elEditMsg.textContent="Error: choose a fuel key."; return; }
+    if (!k) { elEditMsg.textContent = "Error: choose a fuel key."; return; }
 
-    const name = (elEditName.value || "").trim() || k;
-    const xC = Number(elEditXC.value);
-    const yH = Number(elEditYH.value);
-    const zO = Number(elEditZO.value);
-    const rho = Number(elEditRho.value);
-    const LHV = Number(elEditLHV.value);
+    const name = elEditName.value.trim() || k;
+    const xC = parseFloat(elEditXC.value);
+    const yH = parseFloat(elEditYH.value);
+    const zO = parseFloat(elEditZO.value);
+    const rho = parseFloat(elEditRho.value);
+    const LHV = parseFloat(elEditLHV.value);
 
-    if (![xC,yH,zO,rho,LHV].every(v => Number.isFinite(v))){
-      elEditMsg.textContent="Error: numeric fields must be valid numbers.";
+    if (![xC,yH,zO,rho,LHV].every(v => Number.isFinite(v))) {
+      elEditMsg.textContent = "Error: numeric fields must be valid numbers.";
       return;
     }
-    if (xC<0 || yH<0 || zO<0 || rho<=0 || LHV<=0){
-      elEditMsg.textContent="Error: non-physical values (check rho/LHV and x/y/z).";
+    if (xC < 0 || yH < 0 || zO < 0 || rho <= 0 || LHV <= 0) {
+      elEditMsg.textContent = "Error: non-physical values (check rho/LHV and x/y/z).";
       return;
     }
 
     const existing = FUELS[k] || {};
     const cat = existing.cat || "User (local)";
     FUELS[k] = { cat, name, xC, yH, zO, rho, LHV };
+
     saveLocalFuels();
-    elEditMsg.textContent = `Saved '${k}' locally.`;
+    elEditMsg.textContent = `Saved '${k}'. (Stored locally in this browser.)`;
     refreshAllDropdowns();
   });
 
   document.getElementById("btnNewFuel").addEventListener("click", () => {
-    const newKey = prompt("Enter new fuel key (e.g., eKeroX):");
+    const newKey = prompt("Enter new fuel key (e.g., eKero):");
     if (!newKey) return;
     const k = newKey.trim();
     if (!k) return;
-    if (!FUELS[k]){
+
+    if (!FUELS[k]) {
       FUELS[k] = { cat:"User (local)", name:k, xC:12, yH:26, zO:0, rho:780, LHV:43.3 };
       saveLocalFuels();
     }
     refreshAllDropdowns();
     elEditKey.value = k;
     loadEditorFromKey(k);
-    elEditMsg.textContent = `Created '${k}'. Update properties and Save.`;
+    elEditMsg.textContent = `Created '${k}'. Update x/y/z/rho/LHV then click Save.`;
   });
 
   document.getElementById("btnResetLocal").addEventListener("click", () => {
-    if (!confirm("Reset local edits? (Removes fuels saved in THIS browser only)")) return;
+    if (!confirm("Reset local edits? This removes fuels saved in THIS browser only.")) return;
     resetLocalFuels();
-    elEditMsg.textContent="Local edits cleared (defaults restored).";
+    elEditMsg.textContent = "Local edits cleared. Back to defaults.";
     refreshAllDropdowns();
   });
 
   elEditKey.addEventListener("change", () => loadEditorFromKey(elEditKey.value));
 
-  /* ===================== SIMPLE CANVAS PLOTTER ===================== */
-  function fitCanvas(canvas){
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    const w = Math.max(300, Math.floor(rect.width * dpr));
-    const h = Math.max(220, Math.floor(rect.height * dpr));
-    if (canvas.width !== w || canvas.height !== h){
-      canvas.width = w;
-      canvas.height = h;
-    }
-    return { w, h, dpr };
+  function setAfrEnabled(on){
+    afrEnabled = on;
+    elAfrActRange.disabled = !on;
+    elAfrActVal.textContent = on ? Number(elAfrActRange.value).toFixed(1) : "—";
   }
-  function drawAxes(ctx, x0, y0, w, h){
-    ctx.save();
-    ctx.strokeStyle = "rgba(255,255,255,.18)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.rect(x0, y0, w, h);
-    ctx.stroke();
-    ctx.restore();
-  }
-  function drawLine(ctx, xs, ys, xMap, yMap){
-    ctx.save();
-    ctx.strokeStyle = "rgba(98,168,255,.95)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    for (let i=0;i<xs.length;i++){
-      const x = xMap(xs[i]);
-      const y = yMap(ys[i]);
-      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-    }
-    ctx.stroke();
-    ctx.restore();
-  }
-  function drawHLine(ctx, y, x0, x1){
-    ctx.save();
-    ctx.strokeStyle = "rgba(255,204,102,.70)";
-    ctx.setLineDash([6,5]);
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(x0,y); ctx.lineTo(x1,y);
-    ctx.stroke();
-    ctx.restore();
-  }
-  function drawVLine(ctx, x, y0, y1){
-    ctx.save();
-    ctx.strokeStyle = "rgba(255,204,102,.70)";
-    ctx.setLineDash([6,5]);
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(x,y0); ctx.lineTo(x,y1);
-    ctx.stroke();
-    ctx.restore();
-  }
-  function label(ctx, text, x, y, align="left"){
-    ctx.save();
-    ctx.fillStyle = "rgba(231,238,252,.92)";
-    ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.textAlign = align;
-    ctx.textBaseline = "middle";
-    ctx.fillText(text, x, y);
-    ctx.restore();
-  }
-  function tiny(ctx, text, x, y, align="left"){
-    ctx.save();
-    ctx.fillStyle = "rgba(167,180,209,.92)";
-    ctx.font = "11px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.textAlign = align;
-    ctx.textBaseline = "middle";
-    ctx.fillText(text, x, y);
-    ctx.restore();
+  function setQEnabled(on){
+    qEnabled = on;
+    elQthMWRange.disabled = !on;
+    elQthMWVal.textContent = on ? Number(elQthMWRange.value).toFixed(1) : "—";
   }
 
-  function plot(canvas, title, xLabel, yLabel, xs, ys, markers){
-    const ctx = canvas.getContext("2d");
-    const { w, h } = fitCanvas(canvas);
-    ctx.clearRect(0,0,w,h);
+  document.getElementById("afrClear").addEventListener("click", () => { setAfrEnabled(false); update(); });
+  document.getElementById("qClear").addEventListener("click", () => { setQEnabled(false); update(); });
 
-    const padL = 54, padR = 16, padT = 28, padB = 44;
-    const x0 = padL, y0 = padT, pw = w - padL - padR, ph = h - padT - padB;
+  document.getElementById("q10").addEventListener("click", () => { setQEnabled(true); elQthMWRange.value = 10; elQthMWVal.textContent = "10.0"; update(); });
+  document.getElementById("q50").addEventListener("click", () => { setQEnabled(true); elQthMWRange.value = 50; elQthMWVal.textContent = "50.0"; update(); });
 
-    const xmin = Math.min(...xs), xmax = Math.max(...xs);
-    const ymin = Math.min(...ys), ymax = Math.max(...ys);
-    const yPad = (ymax - ymin) * 0.06 || 1;
-    const yMin2 = ymin - yPad, yMax2 = ymax + yPad;
+  document.getElementById("afrStoich").addEventListener("click", () => {
+    setAfrEnabled(true);
+    const keyA = elFuelA.value, keyB = elFuelB.value;
+    if (!FUELS[keyA] || !FUELS[keyB] || keyA === keyB) return;
+    const wA = parseFloat(elMassA.value)/100.0;
+    const blend = blendMass2(FUELS[keyA], FUELS[keyB], wA);
+    let afr_st;
+    try { afr_st = afrStoichMass(blend); } catch(e){ return; }
+    const v = Math.max(parseFloat(elAfrActRange.min), Math.min(parseFloat(elAfrActRange.max), afr_st));
+    elAfrActRange.value = v.toFixed(1);
+    elAfrActVal.textContent = Number(elAfrActRange.value).toFixed(1);
+    update();
+  });
 
-    const xMap = (x)=> x0 + ( (x - xmin) / (xmax - xmin || 1) ) * pw;
-    const yMap = (y)=> y0 + (1 - ( (y - yMin2) / (yMax2 - yMin2 || 1) )) * ph;
+  elAfrActRange.addEventListener("input", () => {
+    setAfrEnabled(true);
+    elAfrActVal.textContent = Number(elAfrActRange.value).toFixed(1);
+    update();
+  });
 
-    // frame
-    drawAxes(ctx, x0, y0, pw, ph);
+  elQthMWRange.addEventListener("input", () => {
+    setQEnabled(true);
+    elQthMWVal.textContent = Number(elQthMWRange.value).toFixed(1);
+    update();
+  });
 
-    // title
-    label(ctx, title, x0, 14, "left");
-
-    // axes labels
-    tiny(ctx, xLabel, x0 + pw/2, h - 18, "center");
-    ctx.save();
-    ctx.translate(16, y0 + ph/2);
-    ctx.rotate(-Math.PI/2);
-    tiny(ctx, yLabel, 0, 0, "center");
-    ctx.restore();
-
-    // ticks (simple)
-    const nTicks = 5;
-    ctx.save();
-    ctx.strokeStyle = "rgba(255,255,255,.10)";
-    ctx.fillStyle = "rgba(167,180,209,.92)";
-    ctx.font = "11px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    for (let i=0;i<=nTicks;i++){
-      const t = i/nTicks;
-      const y = y0 + (1-t)*ph;
-      ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0+pw, y); ctx.stroke();
-      const val = yMin2 + t*(yMax2-yMin2);
-      ctx.textAlign="right"; ctx.textBaseline="middle";
-      ctx.fillText(val.toFixed(0), x0-8, y);
-    }
-    for (let i=0;i<=nTicks;i++){
-      const t = i/nTicks;
-      const x = x0 + t*pw;
-      ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0+ph); ctx.stroke();
-      const val = xmin + t*(xmax-xmin);
-      ctx.textAlign="center"; ctx.textBaseline="top";
-      ctx.fillText(val.toFixed(2), x, y0+ph+8);
-    }
-    ctx.restore();
-
-    // line
-    drawLine(ctx, xs, ys, xMap, yMap);
-
-    // markers: {xLine, yLine}
-    if (markers?.yLine != null){
-      const y = yMap(markers.yLine);
-      drawHLine(ctx, y, x0, x0+pw);
-      tiny(ctx, `${markers.yLine.toFixed(0)}`, x0+pw-6, y-10, "right");
-    }
-    if (markers?.xLine != null){
-      const x = xMap(markers.xLine);
-      drawVLine(ctx, x, y0, y0+ph);
-      tiny(ctx, `${markers.xLine.toFixed(3)}`, x, y0-10, "center");
-    }
-  }
-
-  /* ===================== UPDATE CORE ===================== */
-  function update(){
-    // inputs
+  function update() {
     const keyA = elFuelA.value;
     const keyB = elFuelB.value;
-    const wA_pct = Number(elMassA.value);
-    const wA = wA_pct/100.0;
+
+    const wA_pct = parseFloat(elMassA.value);
+    const wA = wA_pct / 100.0;
     const wB_pct = 100 - wA_pct;
 
     elPillA.textContent = `A: ${wA_pct.toFixed(0)}%`;
     elPillB.textContent = `B: ${wB_pct.toFixed(0)}%`;
 
-    if (!keyA || !keyB || !FUELS[keyA] || !FUELS[keyB]){
-      showBox(warnBox, "Fuel selection is missing (check filter).");
-      showBox(okBox, "");
+    if (!keyA || !keyB || !FUELS[keyA] || !FUELS[keyB]) {
+      showWarn(warnBox, "Fuel selection is missing (check filter).");
       return;
     }
-    if (keyA === keyB){
-      showBox(warnBox, "Please choose two different fuels.");
-      showBox(okBox, "");
+    if (keyA === keyB) {
+      showWarn(warnBox, "Please choose two different fuels.");
       return;
     }
 
-    // cryogenic note
-    if ((keyA==="LCH4" && ["JetA","HEFA","FT","ATJ"].includes(keyB)) || (keyB==="LCH4" && ["JetA","HEFA","FT","ATJ"].includes(keyA))){
-      showBox(warnBox, "Note: Liquid methane is cryogenic; blending with Jet fuels is not a practical handling basis. Use for screening only.");
+    if ((keyA === "LCH4" && ["JetA","HEFA","FT","ATJ"].includes(keyB)) ||
+        (keyB === "LCH4" && ["JetA","HEFA","FT","ATJ"].includes(keyA))) {
+      showWarn(warnBox, "Note: Liquid methane is cryogenic; blending with Jet fuels is not a practical fuel-handling basis. Use for screening/trends only.");
     } else {
-      showBox(warnBox, "");
+      showWarn(warnBox, "");
     }
 
-    try{
+    try {
       const fA = FUELS[keyA];
       const fB = FUELS[keyB];
-      const blend = blendMass2(fA,fB,wA);
+
+      const blend = blendMass2(fA, fB, wA);
 
       const mwf = mwFuel(blend);
       const nuO2 = nuO2Stoich(blend);
@@ -1239,183 +1282,128 @@
       const co2gkWh = co2PerKWhth_g(blend);
       const LHVvol = blend.LHV * blend.rho / 1000.0;
 
-      const AFRact = Number(elAfrAct.value);
-      const QthMW = Number(elQth.value);
+      const afr_act = (afrEnabled ? Number(elAfrActRange.value) : NaN);
+      const hasAFRact = Number.isFinite(afr_act) && afr_act > 0;
 
-      const hasAFR = Number.isFinite(AFRact) && AFRact>0;
-      const hasQ = Number.isFinite(QthMW) && QthMW>0;
+      const qMW = (qEnabled ? Number(elQthMWRange.value) : NaN);
+      const hasQ = Number.isFinite(qMW) && qMW > 0;
 
-      // Demo A derived
       let phi = NaN, lambda = NaN, q_air = NaN;
       let mdot_f = NaN, mdot_a = NaN;
 
-      if (hasAFR){
-        phi = afr_st / AFRact;
-        lambda = (phi>0) ? 1.0/phi : NaN;
-        q_air = blend.LHV / AFRact;
+      if (hasAFRact) {
+        phi = afr_st / afr_act;
+        lambda = 1.0 / phi;
+        q_air = blend.LHV / afr_act;
 
-        if (hasQ){
-          const Q_MJps = QthMW; // 1 MW = 1 MJ/s
+        if (hasQ) {
+          const Q_MJps = qMW; // 1 MW = 1 MJ/s
           mdot_f = Q_MJps / blend.LHV;
-          mdot_a = AFRact * mdot_f;
+          mdot_a = afr_act * mdot_f;
         }
       }
 
-      // Demo B: T4 using AFRact input
-      const T3 = Number(elT3.value);
-      const eta = Number(elEta.value);
-      const cp = Number(elCp.value);
+      // Dials
+      gLHV.textContent = fmt(blend.LHV, 2);
+      setDial(dLHV, blend.LHV, 20, 50);
 
-      let T4cur = NaN;
-      if (Number.isFinite(T3) && Number.isFinite(eta) && Number.isFinite(cp) && hasAFR){
-        T4cur = T4_from_AFRact({T3, LHV_MJkg:blend.LHV, AFRact, eta, cp_kJkgK:cp});
-      }
+      gRho.textContent = fmt(blend.rho, 1);
+      setDial(dRho, blend.rho, 650, 900);
 
-      // Fill dials
-      gLHV.textContent = fmt(blend.LHV,2);     setDial(dLHV, blend.LHV, 20, 50);
-      gRho.textContent = fmt(blend.rho,1);     setDial(dRho, blend.rho, 650, 900);
-      gAFRst.textContent = fmt(afr_st,2);      setDial(dAFR, afr_st, 5, 25);
-      gCO2kWh.textContent = fmt(co2gkWh,1);    setDial(dCO2kWh, co2gkWh, 150, 350);
+      gAFRst.textContent = fmt(afr_st, 2);
+      setDial(dAFR, afr_st, 5, 25);
 
-      if (hasAFR){
-        gPhi.textContent = fmt(phi,3);         setDial(dPhi, phi, 0.2, 2.0);
-      } else {
-        gPhi.textContent = "—";               setDial(dPhi, NaN, 0.2, 2.0);
-      }
-
-      if (Number.isFinite(T4cur)){
-        gT4.textContent = fmt(T4cur,0);        setDial(dT4, T4cur, 900, 2100);
-      } else {
-        gT4.textContent = "—";                setDial(dT4, NaN, 900, 2100);
-      }
+      gCO2kWh.textContent = fmt(co2gkWh, 1);
+      setDial(dCO2kWh, co2gkWh, 150, 350);
 
       // Columns
-      bLHVvol.textContent = fmt(LHVvol,2); setCol(cLHVvol, LHVvol, 10, 40);
-      bCO2kgkg.textContent = fmt(co2kgkg,3); setCol(cCO2, co2kgkg, 1.5, 3.5);
-      bH2Okgkg.textContent = fmt(h2okgkg,3); setCol(cH2O, h2okgkg, 0.5, 2.0);
+      bLHVvol.textContent = fmt(LHVvol, 2);
+      setCol(cLHVvol, LHVvol, 10, 40);
 
-      if (hasAFR){
-        bQair.textContent = fmt(q_air,3); setCol(cQair, q_air, 0.5, 5.0);
+      bCO2kgkg.textContent = fmt(co2kgkg, 3);
+      setCol(cCO2, co2kgkg, 1.5, 3.5);
+
+      bH2Okgkg.textContent = fmt(h2okgkg, 3);
+      setCol(cH2O, h2okgkg, 0.5, 2.0);
+
+      if (hasAFRact){
+        gPhi.textContent = fmt(phi, 3);
+        setDial(dPhi, phi, 0.2, 2.0);
+
+        bQair.textContent = fmt(q_air, 3);
+        setCol(cQair, q_air, 0.5, 5.0);
+
+        tLambda.textContent = fmt(lambda, 3);
       } else {
-        bQair.textContent = "—"; setCol(cQair, NaN, 0.5, 5.0);
-      }
+        gPhi.textContent = "—";
+        setDial(dPhi, NaN, 0.2, 2.0);
 
-      // Bars
-      tFormula.textContent = `C${fmt(blend.xC,3)}H${fmt(blend.yH,3)}O${fmt(blend.zO,3)}`;
-      tMW.textContent = fmt(mwf,2);
-      tNuO2.textContent = fmt(nuO2,4);
+        bQair.textContent = "—";
+        setCol(cQair, NaN, 0.5, 5.0);
 
-      if (hasAFR){
-        tLambda.textContent = fmt(lambda,3);
-        setHBar(hbLambda, lambda, 0.5, 3.0);
-      } else {
         tLambda.textContent = "—";
-        setHBar(hbLambda, NaN, 0.5, 3.0);
       }
 
+      // Bars text
+      tFormula.textContent = `C${fmt(blend.xC,3)}H${fmt(blend.yH,3)}O${fmt(blend.zO,3)}`;
+      tMW.textContent = fmt(mwf, 2);
+      tNuO2.textContent = fmt(nuO2, 4);
+
+      tMdotF.textContent = (hasAFRact && hasQ) ? fmt(mdot_f, 6) : "—";
+      tMdotA.textContent = (hasAFRact && hasQ) ? fmt(mdot_a, 6) : "—";
+
+      // Horizontal bars
       setHBar(hbMW, mwf, 120, 200);
       setHBar(hbNuO2, nuO2, 10, 25);
+      setHBar(hbLambda, lambda, 0.5, 3.0);
 
-      if (hasAFR && hasQ){
-        tMdotF.textContent = fmt(mdot_f,6);
-        tMdotA.textContent = fmt(mdot_a,6);
+      if (hasAFRact && hasQ){
         setHBar(hbMdotF, mdot_f, 0.0, 1.0);
         setHBar(hbMdotA, mdot_a, 0.0, 25.0);
       } else {
-        tMdotF.textContent = "—";
-        tMdotA.textContent = "—";
         setHBar(hbMdotF, NaN, 0.0, 1.0);
         setHBar(hbMdotA, NaN, 0.0, 25.0);
       }
 
-      // ===== Demo B: map generation =====
-      const phiMin = Number(elPhiMin.value);
-      const phiMax = Number(elPhiMax.value);
-      const T4tar = Number(elT4target.value);
+      // ===== NEW: Update schematic =====
+      updateSchematic({
+        wA: wA,
+        wB: 1 - wA,
+        afr_act: (hasAFRact ? afr_act : NaN),
+        afr_st: afr_st,
+        phi: (hasAFRact ? phi : NaN),
+        qMW: (hasQ ? qMW : NaN),
+        mdot_f: (hasAFRact && hasQ ? mdot_f : NaN),
+        mdot_a: (hasAFRact && hasQ ? mdot_a : NaN),
+        fuelAKey: keyA,
+        fuelBKey: keyB
+      });
 
-      const okInputsB = [T3,eta,cp,phiMin,phiMax,T4tar].every(Number.isFinite) && (phiMax > phiMin) && (phiMin > 0) && (cp>0) && (eta>0);
-
-      let phiSolve = { ok:false, phi:NaN, AFRact:NaN };
-      let mapPhi = [], mapT4 = [], mapAFR = [];
-      if (okInputsB){
-        const n = 90;
-        for (let i=0;i<n;i++){
-          const phi_i = phiMin + (phiMax-phiMin) * (i/(n-1));
-          const out = T4_from_phi({T3, LHV_MJkg:blend.LHV, AFRst:afr_st, phi:phi_i, eta, cp_kJkgK:cp});
-          mapPhi.push(phi_i);
-          mapT4.push(out.T4);
-          mapAFR.push(out.AFRact);
-        }
-        phiSolve = solvePhiForT4({
-          T3, LHV_MJkg:blend.LHV, AFRst:afr_st, eta, cp_kJkgK:cp,
-          phiMin, phiMax, T4target:T4tar
-        });
-      }
-
-      // KPI boxes
-      if (phiSolve.ok){
-        kPhiTarget.textContent = fmt(phiSolve.phi,3);
-        kAFRtarget.textContent = fmt(phiSolve.AFRact,2);
-        showBox(okBox, `Demo B: solvable — ϕ ≈ ${fmt(phiSolve.phi,3)} hits T₄,target ≈ ${fmt(T4tar,0)} K (within map range).`);
-      } else {
-        kPhiTarget.textContent = "—";
-        kAFRtarget.textContent = "—";
-        if (okInputsB){
-          showBox(okBox, "");
-          showBox(warnBox, warnBox.textContent || "Demo B: target T₄ is not reachable within the chosen ϕ range (try expanding ϕ min/max or adjusting inputs).");
-        } else {
-          showBox(okBox, "");
-        }
-      }
-
-      kT4cur.textContent = Number.isFinite(T4cur) ? fmt(T4cur,0) : "—";
-
-      // charts
-      if (mapPhi.length){
-        plot(cvT4, "T₄ vs ϕ (0-D screening)", "ϕ (—)", "T₄ (K)", mapPhi, mapT4, {
-          xLine: phiSolve.ok ? phiSolve.phi : null,
-          yLine: Number.isFinite(T4tar) ? T4tar : null
-        });
-        plot(cvAFR, "AFRact vs ϕ", "ϕ (—)", "AFRact (kg/kg)", mapPhi, mapAFR, {
-          xLine: phiSolve.ok ? phiSolve.phi : null,
-          yLine: phiSolve.ok ? phiSolve.AFRact : null
-        });
-      } else {
-        // clear
-        const ctx1 = cvT4.getContext("2d"); fitCanvas(cvT4); ctx1.clearRect(0,0,cvT4.width,cvT4.height);
-        const ctx2 = cvAFR.getContext("2d"); fitCanvas(cvAFR); ctx2.clearRect(0,0,cvAFR.width,cvAFR.height);
-      }
-
-    } catch(e){
-      showBox(warnBox, "Computation error: " + (e?.message || e));
-      showBox(okBox, "");
+    } catch (e) {
+      showWarn(warnBox, "Computation error: " + (e?.message || e));
     }
   }
 
-  /* ===================== EVENTS ===================== */
   elFuelA.addEventListener("change", update);
   elFuelB.addEventListener("change", update);
   elMassA.addEventListener("input", update);
   elName.addEventListener("input", update);
-  elFuelSearch.addEventListener("input", refreshAllDropdowns);
+  elFuelSearch.addEventListener("input", () => refreshAllDropdowns());
 
-  [elT3,elP3,elAfrAct,elQth,elEta,elCp,elPhiMin,elPhiMax,elT4target].forEach(el => {
-    el.addEventListener("input", update);
-  });
-
-  document.getElementById("btnRecompute").addEventListener("click", update);
-
-  window.addEventListener("resize", () => update());
-
-  /* ===================== INIT ===================== */
-  function init(){
+  function initDropdowns(){
     refreshAllDropdowns();
-    // default selection
-    if (FUELS.HEFA) elFuelA.value = "HEFA";
     if (FUELS.JetA) elFuelB.value = "JetA";
+    if (FUELS.HEFA) elFuelA.value = "HEFA";
+
+    elAfrActVal.textContent = Number(elAfrActRange.value).toFixed(1);
+    elQthMWVal.textContent = Number(elQthMWRange.value).toFixed(1);
+
+    setAfrEnabled(true);
+    setQEnabled(true);
+
     update();
   }
-  init();
+  initDropdowns();
 </script>
 </body>
 </html>
