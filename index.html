@@ -868,7 +868,7 @@
         <div class="barBox" id="phase2Box" style="margin-top:14px">
           <div class="barTitleRow">
             <div class="barTitle">Phase 2 – Lean-Premixed Chemistry (offline batch)</div>
-            <div class="small">lookup: Tad + ignition delay</div>
+            <div class="small">lookup: Tad (surrogate)</div>
           </div>
 
           <div class="row" style="gap:12px; align-items:end; margin-top:8px">
@@ -955,7 +955,7 @@
           </div>
 
           <div class="note" style="margin-top:10px">
-            Phase 2 uses a precomputed lookup (<span class="mono">phase2/out/phase2_lookup_v1.json</span>). If it is missing, values show as “—”.
+            Phase 2 uses a precomputed lookup (<span class="mono">phase2/out/phase2_lookup_surrogate.json</span>). If it is missing, values show as “—”.
           </div>
         </div>
 
@@ -982,144 +982,100 @@
   let PHASE2 = null;
 
   async function loadPhase2Lookup() {
-    // Tries newest surrogate lookup first, then falls back to v1.
-    const candidates = [
-      "./phase2/out/phase2_lookup_surrogate.json",
-      "./phase2/out/phase2_lookup_v2_surrogate.json",
-      "./phase2/out/phase2_lookup_v1.json",
-      "./phase2_lookup_surrogate.json",
-      "./phase2_lookup_v2_surrogate.json",
-      "./phase2_lookup_v1.json"
-    ];
-    for (const url of candidates) {
-      try {
-        const res = await fetch(url, { cache: "no-store" });
-        if (!res.ok) continue;
-        PHASE2 = await res.json();
-        PHASE2._source_url = url;
-        const meta = (PHASE2 && PHASE2.meta)
-          ? `${PHASE2.meta.version || "?"} • ${PHASE2.meta.mechanism || ""}`.trim()
-          : "loaded";
-        const elMeta = document.getElementById("p2_meta");
-        if (elMeta) elMeta.textContent = `${meta} (${url})`;
-        console.log("Phase 2 lookup loaded:", url, PHASE2?.data?.length || 0, "rows");
-        try { update(); } catch(_) {}
-        return;
-      } catch (e) {
-        // try next
-      }
+    try {
+      const res = await fetch("./phase2/out/phase2_lookup_surrogate.json");
+      PHASE2 = await res.json();
+      const meta = (PHASE2 && PHASE2.meta) ? `${PHASE2.meta.version || "v?"} • ${PHASE2.meta.mechanism || ""}`.trim() : "loaded";
+      const elMeta = document.getElementById("p2_meta");
+      if (elMeta) elMeta.textContent = meta || "loaded";
+      console.log("Phase 2 lookup loaded:", PHASE2?.data?.length || 0, "rows");
+      // refresh once loaded
+      try { update(); } catch(_) {}
+    } catch (e) {
+      console.warn("Phase 2 lookup not available:", e);
+      const elMeta = document.getElementById("p2_meta");
+      if (elMeta) elMeta.textContent = "not loaded";
     }
-    console.warn("Phase 2 lookup not available");
-    const elMeta = document.getElementById("p2_meta");
-    if (elMeta) elMeta.textContent = "not loaded";
   }
 
-  function findNearestPhase2Row({keyA, keyB, wA, Pbar, TinK, phi}) {
-    if (!PHASE2 || !Array.isArray(PHASE2.data)) return null;
-    const FA = FUELS[keyA];
-    const FB = FUELS[keyB];
-    if (!FA || !FB) return null;
+  function phase2RiskFlag(tau_ms, Tad_K) {
+    if (!Number.isFinite(tau_ms) || !Number.isFinite(Tad_K)) return "—";
+    if (tau_ms > 10 || Tad_K > 2250) return "High risk";
+    if (tau_ms > 5  || Tad_K > 2150) return "Risk";
+    return "OK";
+  }
 
-    // target surrogate (from your fuel elemental composition)
-    const blend = blendCHO(FA, FB, wA);
-    const tHC = blend?.HC;
-    const tOC = blend?.OC;
+  function findNearestPhase2Row({x, y, z, Pbar, TinK, phi}) {
+    // Surrogate-only lookup: match by (P_bar, T_in, phi, x, y, z)
+    // The JSON grid may be moderately large; simple nearest-neighbor is fine for UI speed.
+    if (!PHASE2 || !Array.isArray(PHASE2.data) || PHASE2.data.length === 0) return null;
 
     let best = null;
     let bestScore = Infinity;
 
     for (const r of PHASE2.data) {
-      // --- handle key-based rows (v1 style) including swapped order
-      let wA_eff = wA;
-      let keysMatch = false;
-      if (r && (r.keyA || r.keyB || r.fuelA || r.fuelB)) {
-        const rA = (r.keyA ?? r.fuelA ?? "").toString();
-        const rB = (r.keyB ?? r.fuelB ?? "").toString();
-        if (rA === keyA && rB === keyB) {
-          keysMatch = true;
-          wA_eff = wA;
-        } else if (rA === keyB && rB === keyA) {
-          keysMatch = true;
-          wA_eff = 1 - wA; // swapped
-        } else {
-          // if row is explicitly for other fuels, skip it
-          continue;
-        }
-      }
+      const dP   = Math.abs((r.P_bar ?? r.Pbar ?? 0) - Pbar);
+      const dT   = Math.abs((r.T_in  ?? r.Tin  ?? 0) - TinK);
+      const dPhi = Math.abs((r.phi   ?? 0) - phi);
 
-      const rP = Number(r.P_bar ?? r.Pbar ?? r.P ?? NaN);
-      const rT = Number(r.Tin_K ?? r.TinK ?? r.Tin ?? r.T ?? NaN);
-      const rPhi = Number(r.phi ?? r.Phi ?? NaN);
-      const rWA = Number(r.wA ?? r.w_a ?? r.w ?? NaN);
+      const dx = Math.abs((r.x ?? 0) - x);
+      const dy = Math.abs((r.y ?? 0) - y);
+      const dz = Math.abs((r.z ?? 0) - z);
 
-      // composition in file (surrogate style)
-      let rHC = r.HC;
-      let rOC = r.OC;
-      if (rHC == null && r.yH != null && r.xC != null) rHC = Number(r.yH) / Number(r.xC);
-      if (rOC == null && r.zO != null && r.xC != null) rOC = Number(r.zO) / Number(r.xC);
+      // Weighting: prioritize chemistry match (x,y,z), then operating conditions
+      const score = 10*dx + 10*dy + 10*dz + 1.5*dP + 0.02*dT + 2*dPhi;
 
-      // Scoring weights (tuned to prefer phi/P/T first, then blend)
-      let s = 0;
-
-      if (Number.isFinite(rP) && Number.isFinite(Pbar)) s += Math.pow((rP - Pbar) / 5.0, 2);
-      if (Number.isFinite(rT) && Number.isFinite(TinK)) s += Math.pow((rT - TinK) / 200.0, 2);
-      if (Number.isFinite(rPhi) && Number.isFinite(phi)) s += Math.pow((rPhi - phi) / 0.2, 2);
-
-      // If row provides wA, compare to the effective wA for swapped-order safety
-      if (Number.isFinite(rWA)) s += Math.pow((rWA - wA_eff) / 0.2, 2);
-
-      // Composition match (lets it work for oxygenated fuels, since zO is non-zero)
-      if (Number.isFinite(rHC) && Number.isFinite(tHC)) s += Math.pow((rHC - tHC) / 1.0, 2);
-      if (Number.isFinite(rOC) && Number.isFinite(tOC)) s += Math.pow((rOC - tOC) / 0.5, 2);
-
-      // if this was a key-matched row, slightly prefer it over surrogate-only rows
-      if (keysMatch) s *= 0.85;
-
-      if (s < bestScore) {
-        bestScore = s;
-        best = r;
-        best._wA_eff = wA_eff;
-      }
+      if (score < bestScore) { bestScore = score; best = r; }
     }
     return best;
   }
 
-
+    return best;
+  }
 
   function updatePhase2({keyA, keyB, wA, phiLive}) {
-    const elTad = document.getElementById("p2_Tad");
-    const elTau = document.getElementById("p2_tau");
+    const elTad  = document.getElementById("p2_tad");
+    const elTign = document.getElementById("p2_tign");
     const elRisk = document.getElementById("p2_risk");
+    if (!elTad || !elTign || !elRisk) return;
 
-    if (!elTad || !elTau || !elRisk) return;
+    // Default UI state
+    const screening = () => { elTad.textContent = "screening"; elTign.textContent = "screening"; elRisk.textContent = "—"; };
+    if (!PHASE2 || !Array.isArray(PHASE2.data) || PHASE2.data.length === 0) { screening(); return; }
 
-    if (!PHASE2 || !PHASE2.data) {
-      elTad.textContent = "—";
-      elTau.textContent = "—";
+    // Operating conditions
+    const Pbar = Number(document.getElementById("p2_Pbar")?.value || 10);
+    const TinK = Number(document.getElementById("p2_TinK")?.value || 800);
+
+    // Blend surrogate (x,y,z) from selected fuels (C,H,O atomic counts per "mole" of surrogate fuel)
+    const fA = FUELS[keyA];
+    const fB = FUELS[keyB];
+    if (!fA || !fB) { screening(); return; }
+
+    // Many fuels are stored as xC,yH,zO. Use those directly.
+    const blend = blendCHO(fA, fB, wA); // {xC,yH,zO, HC, OC}
+    const x = Number(blend.xC), y = Number(blend.yH), z = Number(blend.zO);
+    if (![x,y,z].every(v => Number.isFinite(v))) { screening(); return; }
+
+    // Equivalence ratio
+    const phi = Number.isFinite(phiLive) ? Number(phiLive) : 1.0;
+
+    // Nearest-neighbor lookup
+    const row = findNearestPhase2Row({x, y, z, Pbar, TinK, phi});
+    if (!row) { screening(); return; }
+
+    const Tad = Number(row.Tad ?? row.Tad_K ?? row.Tad_HP ?? NaN);
+    const tau = row.tau_ms;
+
+    elTad.textContent  = Number.isFinite(Tad) ? Tad.toFixed(0) : "—";
+    elTign.textContent = (tau === null || tau === undefined || !Number.isFinite(Number(tau))) ? "—" : Number(tau).toFixed(2);
+
+    // Simple risk flag (screening): high Tad may indicate NOx/thermal risk, etc.
+    if (Number.isFinite(Tad)) {
+      elRisk.textContent = (Tad >= 2200) ? "HIGH Tad" : "OK";
+    } else {
       elRisk.textContent = "—";
-      return;
     }
-
-    const Pbar = parseFloat(document.getElementById("p2_Pbar")?.value || "10");
-    const TinK = parseFloat(document.getElementById("p2_TinK")?.value || "800");
-    const useLive = !!document.getElementById("p2_useLivePhi")?.checked;
-    const phi = useLive ? phiLive : phiLive; // v1 uses live phi; per-case phi can be added later
-
-    const row = findNearestPhase2Row({keyA, keyB, wA, Pbar, TinK, phi});
-
-    if (!row) {
-      elTad.textContent = "—";
-      elTau.textContent = "—";
-      elRisk.textContent = "—";
-      return;
-    }
-
-    const Tad = Number(row.Tad_K);
-    const tau = Number(row.tau_ms);
-
-    elTad.textContent = Number.isFinite(Tad) ? Tad.toFixed(0) : "N/A";
-    elTau.textContent = Number.isFinite(tau) ? tau.toFixed(2) : "N/A";
-    elRisk.textContent = phase2RiskFlag(tau, Tad);
   }
 
   loadPhase2Lookup();
