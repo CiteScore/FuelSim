@@ -974,60 +974,50 @@
   </div>
 
 <script>
+
+  // --- Safety net: don't silently kill the UI if a JS error happens ---
+  window.addEventListener('error', (ev) => {
+    console.error('FuelSim error:', ev.error || ev.message);
+  });
+  window.addEventListener('unhandledrejection', (ev) => {
+    console.error('FuelSim promise rejection:', ev.reason);
+  });
+
   const Y_O2_AIR = 0.232;
   const MW = { C: 12.011, H: 1.008, O: 15.999, O2: 31.998, CO2: 44.0095, H2O: 18.01528 };
   // =======================
   // Phase 2 (offline lookup)
   // =======================
   let PHASE2 = null;
-  let PHASE2_ROWS = [];
-  let PHASE2_SRC = "";
-  function _phase2Rows(obj){
-  if(!obj) return [];
-  if(Array.isArray(obj)) return obj;
-  return obj.data || obj.rows || obj.table || obj.lookup || [];
-}
 
-async function loadPhase2Lookup() {
-  const candidates = [
-    "./phase2/out/phase2_lookup_v2_surrogate.json",
-    "./phase2/out/phase2_lookup_v1.json",
-    "./phase2_lookup_v1.json"
-  ];
-
-  for (const url of candidates) {
+  async function loadPhase2Lookup() {
+  try {
+    let res = await fetch("./phase2/out/phase2_lookup_v2_surrogate.json");
+    if (!res.ok) throw new Error("phase2_lookup_v2_surrogate.json not found");
+    PHASE2 = await res.json();
+  } catch (e1) {
     try {
-      const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      const js = await res.json();
-      const rows = _phase2Rows(js);
-      if (!Array.isArray(rows) || rows.length === 0) throw new Error("No rows");
-      PHASE2 = js;
-      PHASE2_ROWS = rows;
-      PHASE2_SRC = url;
-
-      const meta = (PHASE2 && PHASE2.meta) ? PHASE2.meta : {};
-      const metaBits = [];
-      if (meta.version) metaBits.push(meta.version);
-      if (meta.mechanism) metaBits.push(meta.mechanism);
-      if (meta.device) metaBits.push(meta.device);
-      const metaText = metaBits.length ? metaBits.join(" • ") : "loaded";
+      const res = await fetch("./phase2/out/phase2_lookup_v1.json");
+      PHASE2 = await res.json();
+    } catch (e2) {
+      console.warn("Phase 2 lookup not available:", e1, e2);
       const elMeta = document.getElementById("p2_meta");
-      if (elMeta) elMeta.textContent = metaText;
-
-      console.log("Phase2 lookup loaded:", url, "| rows:", PHASE2_ROWS.length);
-      try { update(); } catch (_) {}
+      if (elMeta) elMeta.textContent = "not loaded";
       return;
-    } catch (e) {
-      // try next
     }
   }
-  console.warn("Phase2 lookup not available.");
-  PHASE2 = null; PHASE2_ROWS = []; PHASE2_SRC = "";
-  const elMeta = document.getElementById("p2_meta");
-  if (elMeta) elMeta.textContent = "not loaded";
-}
-
+      const meta = (PHASE2 && PHASE2.meta) ? `${PHASE2.meta.version || "v?"} • ${PHASE2.meta.mechanism || ""}`.trim() : "loaded";
+      const elMeta = document.getElementById("p2_meta");
+      if (elMeta) elMeta.textContent = meta || "loaded";
+      console.log("Phase 2 lookup loaded:", PHASE2?.data?.length || 0, "rows");
+      // refresh once loaded
+      try { update(); } catch(_) {}
+    } catch (e) {
+      console.warn("Phase 2 lookup not available:", e);
+      const elMeta = document.getElementById("p2_meta");
+      if (elMeta) elMeta.textContent = "not loaded";
+    }
+  }
 
   function phase2RiskFlag(tau_ms, Tad_K) {
     if (!Number.isFinite(tau_ms) || !Number.isFinite(Tad_K)) return "—";
@@ -1036,66 +1026,13 @@ async function loadPhase2Lookup() {
     return "OK";
   }
 
-  function findNearestPhase2Row(Pbar, TinK, phi, keyA, keyB, wA, blendCHO) {
-  if (!PHASE2_ROWS || PHASE2_ROWS.length === 0) return null;
-
-  // Target chemistry in H/C and O/C (works for oxygenated fuels too)
-  const xC = blendCHO && Number.isFinite(blendCHO.xC) ? blendCHO.xC : NaN;
-  const yH = blendCHO && Number.isFinite(blendCHO.yH) ? blendCHO.yH : NaN;
-  const zO = blendCHO && Number.isFinite(blendCHO.zO) ? blendCHO.zO : 0;
-  const targetHC = (Number.isFinite(xC) && xC > 0) ? (yH / xC) : NaN;
-  const targetOC = (Number.isFinite(xC) && xC > 0) ? (zO / xC) : 0;
-
-  // Prefer exact key match if available in table
-  let bestExact = null;
-  let bestExactErr = Infinity;
-
-  let best = null;
-  let bestErr = Infinity;
-
-  for (const r of PHASE2_ROWS) {
-    // must match operating point
-    if (r.Pbar !== Pbar || r.TinK !== TinK || r.phi !== phi) continue;
-
-    const hasKeys = (r.keyA !== undefined && r.keyB !== undefined && r.wA !== undefined);
-
-    // Exact fuel-pair match
-    if (hasKeys && r.keyA === keyA && r.keyB === keyB && Math.abs(r.wA - wA) < 1e-9) {
-      // even among exact matches, pick the one closest in HC/OC if present
-      const rHC = (r.HC !== undefined) ? r.HC : (Number.isFinite(r.xC) && r.xC>0 ? (r.yH/r.xC) : NaN);
-      const rOC = (r.OC !== undefined) ? r.OC : (Number.isFinite(r.xC) && r.xC>0 ? ((r.zO||0)/r.xC) : 0);
-      const e = (Number.isFinite(targetHC) && Number.isFinite(rHC)) ? Math.abs(rHC - targetHC) : 0;
-      const e2 = (Number.isFinite(targetOC) && Number.isFinite(rOC)) ? Math.abs(rOC - targetOC) : 0;
-      const err = e + e2;
-      if (err < bestExactErr) { bestExactErr = err; bestExact = r; }
-      continue;
-    }
-
-    // Surrogate match by HC/OC (fallback for "all fuels")
-    const rHC = (r.HC !== undefined) ? r.HC : (Number.isFinite(r.xC) && r.xC>0 ? (r.yH/r.xC) : NaN);
-    const rOC = (r.OC !== undefined) ? r.OC : (Number.isFinite(r.xC) && r.xC>0 ? ((r.zO||0)/r.xC) : 0);
-
-    let err = 0;
-    if (Number.isFinite(targetHC) && Number.isFinite(rHC)) err += 3.0 * Math.abs(rHC - targetHC);
-    if (Number.isFinite(targetOC) && Number.isFinite(rOC)) err += 2.0 * Math.abs(rOC - targetOC);
-
-    // If the lookup includes chemistry directly, prefer closer xC/yH/zO too
-    if (Number.isFinite(xC) && Number.isFinite(r.xC)) err += 0.2 * Math.abs(r.xC - xC);
-    if (Number.isFinite(yH) && Number.isFinite(r.yH)) err += 0.2 * Math.abs(r.yH - yH);
-    if (Number.isFinite(zO) && Number.isFinite(r.zO)) err += 0.2 * Math.abs((r.zO||0) - (zO||0));
-
-    if (err < bestErr) { bestErr = err; best = r; }
-  }
-
-  return bestExact || best;
-}
-) {
-    if (!PHASE2 || !Array.isArray(PHASE2_ROWS) || PHASE2_ROWS.length === 0) return null;
+  function findNearestPhase2Row({keyA, keyB, wA, Pbar, TinK, phi}) {
+    if (!PHASE2 || !Array.isArray(PHASE2.data) || PHASE2.data.length === 0) return null;
 
     let best = null;
     let bestErr = Infinity;
 
-    for (const r of PHASE2_ROWS) {
+    for (const r of PHASE2.data) {
       if (r.keyA !== keyA || r.keyB !== keyB) continue;
 
       const err =
@@ -1116,7 +1053,7 @@ async function loadPhase2Lookup() {
 
     if (!elTad || !elTau || !elRisk) return;
 
-    if (!PHASE2 || !PHASE2_ROWS) {
+    if (!PHASE2 || !PHASE2.data) {
       elTad.textContent = "—";
       elTau.textContent = "—";
       elRisk.textContent = "—";
@@ -1216,6 +1153,47 @@ async function loadPhase2Lookup() {
     }
   } catch(e) {}
 
+  // --- Blend surrogate elemental formula (supports oxygenated fuels) ---
+  // Returns a blended pseudo-formula CxHyOz whose MW is mass-weighted from the two fuels,
+  // while elemental ratios come from mass-based mixing of elemental moles.
+  function blendCHO(fA, fB, wA) {
+    const xA = +((fA && (fA.xC ?? fA.x ?? fA.C)) ?? 0);
+    const yA = +((fA && (fA.yH ?? fA.y ?? fA.H)) ?? 0);
+    const zA = +((fA && (fA.zO ?? fA.z ?? fA.O)) ?? 0);
+
+    const xB = +((fB && (fB.xC ?? fB.x ?? fB.C)) ?? 0);
+    const yB = +((fB && (fB.yH ?? fB.y ?? fB.H)) ?? 0);
+    const zB = +((fB && (fB.zO ?? fB.z ?? fB.O)) ?? 0);
+
+    const MW_A = 12.011*xA + 1.008*yA + 15.999*zA;
+    const MW_B = 12.011*xB + 1.008*yB + 15.999*zB;
+
+    // Guard against bad inputs
+    if (!(MW_A > 0) || !(MW_B > 0) || !(wA >= 0) || !(wA <= 1)) {
+      return { xC: NaN, yH: NaN, zO: NaN, MW: NaN };
+    }
+
+    const wB = 1 - wA;
+
+    // Elemental moles per unit mass (constant factors cancel)
+    const nC = wA*(xA/MW_A) + wB*(xB/MW_B);
+    const nH = wA*(yA/MW_A) + wB*(yB/MW_B);
+    const nO = wA*(zA/MW_A) + wB*(zB/MW_B);
+
+    // Elemental ratios in the blend
+    const rH = (nC > 0) ? (nH/nC) : 0;
+    const rO = (nC > 0) ? (nO/nC) : 0;
+
+    // Preserve "molecule size" scale by matching mass-weighted MW
+    const MW_target = wA*MW_A + wB*MW_B;
+    const denom = 12.011 + 1.008*rH + 15.999*rO;
+    const xC = MW_target / denom;
+    const yH = rH * xC;
+    const zO = rO * xC;
+
+    return { xC, yH, zO, MW: MW_target };
+  }
+
   function saveLocalFuels(){ try { localStorage.setItem("fuelsim_fuels", JSON.stringify(FUELS)); } catch(e) {} }
   function resetLocalFuels(){
     try { localStorage.removeItem("fuelsim_fuels"); } catch(e) {}
@@ -1223,8 +1201,15 @@ async function loadPhase2Lookup() {
     for (const k of Object.keys(DEFAULT_FUELS)) FUELS[k] = JSON.parse(JSON.stringify(DEFAULT_FUELS[k]));
   }
 
-  function mwFuel(f) { return f.xC*MW.C + f.yH*MW.H + f.zO*MW.O; }
-  function nuO2Stoich(f) { return f.xC + f.yH/4.0 - f.zO/2.0; }
+  function getCHO(f){
+  const xC = +((f && (f.xC ?? f.x ?? f.C)) ?? 0);
+  const yH = +((f && (f.yH ?? f.y ?? f.H)) ?? 0);
+  const zO = +((f && (f.zO ?? f.z ?? f.O)) ?? 0);
+  return {xC, yH, zO};
+}
+
+function mwFuel(f){ const {xC,yH,zO}=getCHO(f); return xC*MW.C + yH*MW.H + zO*MW.O; }
+  function nuO2Stoich(f){ const {xC,yH,zO}=getCHO(f); return xC + yH/4.0 - zO/2.0; }
   function afrStoichMass(f) {
     const nu = nuO2Stoich(f);
     if (nu <= 0) throw new Error("Non-physical stoichiometric O2 requirement.");
