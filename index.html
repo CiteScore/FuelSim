@@ -951,12 +951,11 @@
                 <div class="dialValue"><span class="mono" id="p2_risk">—</span><span class="dialUnit"></span></div>
               </div>
               <div class="small" id="p2_meta" style="text-align:center;color:var(--muted)">not loaded</div>
-              <div class="small" id="p2_src" style="text-align:center;color:var(--muted)">(missing)</div>
             </div>
           </div>
 
           <div class="note" style="margin-top:10px">
-            Phase 2 uses a precomputed lookup (<span class="mono">phase2/out/phase2_lookup_v1.json</span>). If it is missing, values show as “—”.
+            Phase 2 uses a precomputed lookup (<span class="mono">phase2/out/phase2_lookup_surrogate.json</span>). If it is missing, values show as “—”.
           </div>
         </div>
 
@@ -982,40 +981,37 @@
   // =======================
   let PHASE2 = null;
 
-  async function loadPhase2Lookup() {
-    // Phase-2 is optional: keep the rest of the app alive even if this fails.
-    PHASE2 = null;
-    const candidates = [
-      "./phase2/out/phase2_lookup_surrogate.json",
-      "./phase2/out/phase2_lookup_v1.json",
-    ];
-    for (const url of candidates) {
-      try {
-        const res = await fetch(url, { cache: "no-store" });
-        if (!res.ok) continue;
-        const obj = await res.json();
-        if (!obj || !Array.isArray(obj.data)) continue;
-        PHASE2 = obj;
-        const meta = (PHASE2 && PHASE2.meta)
-          ? `${PHASE2.meta.version || "v?"} • ${PHASE2.meta.mechanism || ""}`.trim()
-          : "loaded";
-        const elMeta = document.getElementById("p2_meta");
-        if (elMeta) elMeta.textContent = meta;
-        const elSrc = document.getElementById("p2_src");
-        if (elSrc) elSrc.textContent = url;
-        console.log("Phase 2 lookup loaded:", url, "rows:", PHASE2.data.length);
-        try { update(); } catch (_) {}
-        return;
-      } catch (e) {
-        // try next candidate
-      }
+  async async function loadPhase2Lookup() {
+  // Surrogate-only Phase-2 lookup (Tad only). Keeps UI responsive even if file missing.
+  // Tries surrogate file first, then falls back to legacy v1 file.
+  const candidates = [
+    "./phase2/out/phase2_lookup_surrogate.json",
+    "./phase2/out/phase2_lookup_surrogate.json"
+  ];
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url, {cache: "no-store"});
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      PHASE2 = await res.json();
+      // Ensure meta exists and record which file was loaded
+      if (!PHASE2.meta) PHASE2.meta = {};
+      PHASE2.meta._loaded_from = url;
+      const metaTxt = `${PHASE2.meta.version || "?"} · ${PHASE2.meta.mechanism || "?"}`.trim();
+      const elMeta = document.getElementById("p2_meta");
+      if (elMeta) elMeta.textContent = metaTxt || "loaded";
+      console.log("Phase 2 lookup loaded:", url, (PHASE2.data||[]).length, "rows");
+      try { update(); } catch(e) {}
+      return;
+    } catch (e) {
+      // try next
+      console.warn("Phase 2 lookup load failed:", url, e);
     }
-    console.warn("Phase 2 lookup not available (surrogate or v1).");
-    const elMeta = document.getElementById("p2_meta");
-    if (elMeta) elMeta.textContent = "not loaded";
-    const elSrc = document.getElementById("p2_src");
-    if (elSrc) elSrc.textContent = "(missing)";
   }
+  // If we reach here, nothing loaded
+  PHASE2 = null;
+  const elMeta = document.getElementById("p2_meta");
+  if (elMeta) elMeta.textContent = "not loaded";
+}
 
   function phase2RiskFlag(tau_ms, Tad_K) {
     if (!Number.isFinite(tau_ms) || !Number.isFinite(Tad_K)) return "—";
@@ -1024,7 +1020,57 @@
     return "OK";
   }
 
-  function findNearestPhase2Row({keyA, keyB, wA, Pbar, TinK, phi}) {
+  function findNearestPhase2Row({keyA, keyB, wA, Pbar, TinK, phi, x, y, z}) {
+  if (!PHASE2 || !Array.isArray(PHASE2.data) || PHASE2.data.length === 0) return null;
+
+  // Detect surrogate table by presence of x/y/z columns in first row
+  const r0 = PHASE2.data[0] || {};
+  const isSurrogate = ("x" in r0) || ("y" in r0) || ("z" in r0) || (PHASE2.meta && /surrogate/i.test(PHASE2.meta.device||""));
+
+  // helper: tolerant numeric compare
+  const near = (a,b,eps)=> Math.abs(a-b) <= eps;
+
+  let best = null;
+  let bestScore = Infinity;
+
+  for (const r of PHASE2.data) {
+    // common fields (pressure / Tin / phi) with multiple possible key names
+    const rP = Number(r.P_bar ?? r.Pbar ?? r.p_bar);
+    const rT = Number(r.Tin_K ?? r.T_in ?? r.Tin ?? r.T);
+    const rPhi = Number(r.phi);
+
+    if (!Number.isFinite(rP) || !Number.isFinite(rT) || !Number.isFinite(rPhi)) continue;
+
+    // tight match in operating grid first
+    if (!near(rP, Pbar, 1e-9)) continue;
+    if (!near(rT, TinK, 1e-9)) continue;
+    if (!near(rPhi, phi, 1e-9)) continue;
+
+    if (isSurrogate) {
+      // Surrogate match by closest (x,y,z)
+      const rx = Number(r.x), ry = Number(r.y), rz = Number(r.z);
+      if (!Number.isFinite(rx) || !Number.isFinite(ry) || !Number.isFinite(rz)) continue;
+
+      // distance (normalize a bit so z doesn't dominate when ~0)
+      const dx = (rx - x);
+      const dy = (ry - y);
+      const dz = (rz - z);
+      const score = dx*dx + dy*dy + dz*dz;
+
+      if (score < bestScore) { bestScore = score; best = r; }
+    } else {
+      // Legacy v1: match by keys + wA
+      if ((r.keyA ?? "") !== (keyA ?? "")) continue;
+      if ((r.keyB ?? "") !== (keyB ?? "")) continue;
+      const rwA = Number(r.wA);
+      if (!Number.isFinite(rwA)) continue;
+      if (!near(rwA, wA, 1e-9)) continue;
+      return r; // exact match
+    }
+  }
+
+  return best;
+}) {
     if (!PHASE2 || !Array.isArray(PHASE2.data) || PHASE2.data.length === 0) return null;
 
     let best = null;
@@ -1063,7 +1109,7 @@
     const useLive = !!document.getElementById("p2_useLivePhi")?.checked;
     const phi = useLive ? phiLive : phiLive; // v1 uses live phi; per-case phi can be added later
 
-    const row = findNearestPhase2Row({keyA, keyB, wA, Pbar, TinK, phi});
+    const row = findNearestPhase2Row({keyA, keyB, wA, Pbar, TinK, phi, x: blend.xC, y: blend.yH, z: blend.zO});
 
     if (!row) {
       elTad.textContent = "—";
@@ -1072,7 +1118,7 @@
       return;
     }
 
-    const Tad = Number(row.Tad_K);
+    const Tad = Number(row.Tad_K ?? row.Tad);
     const tau = Number(row.tau_ms);
 
     elTad.textContent = Number.isFinite(Tad) ? Tad.toFixed(0) : "N/A";
