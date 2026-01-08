@@ -983,6 +983,7 @@
   async function loadPhase2Lookup() {
     try {
       const res = await fetch("./phase2/out/phase2_lookup_v1.json");
+      if (!res.ok) throw new Error(`Phase2 JSON fetch failed: ${res.status} ${res.statusText}`);
       PHASE2 = await res.json();
       const meta = (PHASE2 && PHASE2.meta) ? `${PHASE2.meta.version || "v?"} • ${PHASE2.meta.mechanism || ""}`.trim() : "loaded";
       const elMeta = document.getElementById("p2_meta");
