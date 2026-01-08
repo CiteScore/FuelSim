@@ -982,8 +982,7 @@
 
   async function loadPhase2Lookup() {
     try {
-      const res = await fetch("./phase2/out/phase2_lookup_v2_surrogate.json");
-      if (!res.ok) throw new Error(`Phase2 JSON fetch failed: ${res.status} ${res.statusText}`);
+      const res = await fetch("./phase2/out/phase2_lookup_v1.json");
       PHASE2 = await res.json();
       const meta = (PHASE2 && PHASE2.meta) ? `${PHASE2.meta.version || "v?"} • ${PHASE2.meta.mechanism || ""}`.trim() : "loaded";
       const elMeta = document.getElementById("p2_meta");
@@ -1131,14 +1130,6 @@
       for (const k of Object.keys(obj)) FUELS[k] = obj[k];
     }
   } catch(e) {}
-  
-function blendCHO(fA, fB, wA){
-  const xC = wA*fA.xC + (1-wA)*fB.xC;
-  const yH = wA*fA.yH + (1-wA)*fB.yH;
-  const zO = wA*fA.zO + (1-wA)*fB.zO;
-  return { xC, yH, zO, HC: yH/xC, OC: zO/xC };
-}
-
 
   function saveLocalFuels(){ try { localStorage.setItem("fuelsim_fuels", JSON.stringify(FUELS)); } catch(e) {} }
   function resetLocalFuels(){
